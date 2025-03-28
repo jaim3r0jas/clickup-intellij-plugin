@@ -1,0 +1,15 @@
+<idea-plugin>
+    <id>de.safenow.clickup</id>
+    <name>ClickUp Task Server</name>
+    <version>1.0</version>
+    <vendor email="jaimitorojas@gmail.com">Jaime Rojas</vendor>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.tasks</depends>
+    <actions>
+        <!-- Add your actions here -->
+    </actions>
+    <extensions defaultExtensionNs="com.intellij">
+        <tasks.repositoryType implementation="de.safenow.clickup.ideaclickup.ClickUpRepositoryType"/>
+    </extensions>
+</idea-plugin>
