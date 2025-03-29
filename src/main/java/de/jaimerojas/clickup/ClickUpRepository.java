@@ -173,14 +173,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         Set<CustomTaskState> taskStatuses = new HashSet<>();
         for (ClickUpSpace space : fetchSpaces(selectedWorkspaceId)) {
             if (space.getId().equals(selectedSpaceId)) {
-                space.getStatuses().forEach(state -> {
-                    taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus()) {
-                        @Override
-                        public boolean isPredefined() {
-                            return false;
-                        }
-                    });
-                });
+                space.getStatuses().forEach(state ->
+                        taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
             }
         }
 
