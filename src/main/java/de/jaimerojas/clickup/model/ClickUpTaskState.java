@@ -1,4 +1,4 @@
-package de.safenow.clickup.ideaclickup.model;
+package de.jaimerojas.clickup.model;
 
 public class ClickUpTaskState {
     private String id;

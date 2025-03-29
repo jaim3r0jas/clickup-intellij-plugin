@@ -3,8 +3,8 @@ plugins {
     id("org.jetbrains.intellij") version "1.17.4"
 }
 
-group = "de.safenow.clickup"
-version = "1.0"
+group = "de.jaimerojas"
+version = "0.0.1-BETA"
 
 repositories {
     mavenCentral()
@@ -14,8 +14,10 @@ repositories {
 // Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
 intellij {
     version.set("2024.1.7")
-//    type.set("IC") // Target IDE Platform
-    type.set("IU") // Target IDE Platform
+
+    // Target IDE Platform
+    type.set("IC")
+    type.set("IU")
 
     plugins.set(listOf("tasks"))
 }
@@ -29,12 +31,12 @@ tasks {
 
     patchPluginXml {
         sinceBuild.set("241")
-        untilBuild.set("243.*")
+        untilBuild.set("251.*")
     }
 
     signPlugin {
-        certificateChain.set(System.getenv("CERTIFICATE_CHAIN"))
-        privateKey.set(System.getenv("PRIVATE_KEY"))
+        certificateChainFile.set(file("keys/chain.crt"))
+        privateKeyFile.set(file("keys/private.pem"))
         password.set(System.getenv("PRIVATE_KEY_PASSWORD"))
     }
 
@@ -47,7 +49,7 @@ tasks {
         systemProperties(
             "org.gradle.logging.level" to "DEBUG",
             // increase loggingh level to see all intellij Logger is logging
-            "idea.log.level" to "DEBUG"
+            "idea.log.level" to "DEBUG",
         )
     }
 

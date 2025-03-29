@@ -1,4 +1,4 @@
-package de.safenow.clickup.ideaclickup;
+package de.jaimerojas.clickup;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -7,9 +7,9 @@ import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.TaskBundle;
 import com.intellij.tasks.config.BaseRepositoryEditor;
 import com.intellij.util.Consumer;
-import de.safenow.clickup.ideaclickup.model.ClickUpList;
-import de.safenow.clickup.ideaclickup.model.ClickUpSpace;
-import de.safenow.clickup.ideaclickup.model.ClickUpWorkspace;
+import de.jaimerojas.clickup.model.ClickUpList;
+import de.jaimerojas.clickup.model.ClickUpSpace;
+import de.jaimerojas.clickup.model.ClickUpWorkspace;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,7 +17,7 @@ import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.io.IOException;
 
-import static de.safenow.clickup.ideaclickup.ClickUpRepository.API_URL;
+import static de.jaimerojas.clickup.ClickUpRepository.API_URL;
 
 public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpRepository> {
     private static final Logger LOG = Logger.getInstance(ClickUpRepositoryEditor.class);

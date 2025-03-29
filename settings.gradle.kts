@@ -5,4 +5,4 @@ pluginManagement {
     }
 }
 
-rootProject.name = "idea-clickup"
+rootProject.name = "clickup-intellij-plugin"

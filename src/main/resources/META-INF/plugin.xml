@@ -1,8 +1,13 @@
 <idea-plugin>
-    <id>de.safenow.clickup</id>
-    <name>ClickUp Task Server</name>
+    <id>de.jaimerojas.clickup</id>
+    <name>ClickUp</name>
     <version>1.0</version>
     <vendor email="jaimitorojas@gmail.com">Jaime Rojas</vendor>
+
+    <description>
+        Integrate ClickUp with JetBrains IDEs for seamless task management and time tracking. Track time spent on
+        tasks and update them directly in ClickUp.
+    </description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.tasks</depends>
@@ -10,6 +15,6 @@
         <!-- Add your actions here -->
     </actions>
     <extensions defaultExtensionNs="com.intellij">
-        <tasks.repositoryType implementation="de.safenow.clickup.ideaclickup.ClickUpRepositoryType"/>
+        <tasks.repositoryType implementation="de.jaimerojas.clickup.ClickUpRepositoryType"/>
     </extensions>
 </idea-plugin>

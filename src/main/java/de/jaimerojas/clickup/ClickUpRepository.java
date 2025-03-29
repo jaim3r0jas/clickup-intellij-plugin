@@ -1,4 +1,4 @@
-package de.safenow.clickup.ideaclickup;
+package de.jaimerojas.clickup;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
@@ -6,12 +6,15 @@ import com.google.gson.reflect.TypeToken;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
-import com.intellij.tasks.*;
+import com.intellij.tasks.CustomTaskState;
+import com.intellij.tasks.LocalTask;
+import com.intellij.tasks.Task;
+import com.intellij.tasks.TaskRepositoryType;
 import com.intellij.tasks.impl.BaseRepository;
 import com.intellij.tasks.impl.httpclient.NewBaseRepositoryImpl;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
-import de.safenow.clickup.ideaclickup.model.*;
+import de.jaimerojas.clickup.model.*;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
@@ -119,7 +122,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         try {
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
-                Type listType = new TypeToken<GetTasks>() {}.getType();
+                Type listType = new TypeToken<GetTasks>() {
+                }.getType();
                 final ClickUpTask[] tasks = ((GetTasks) gson.fromJson(responseBody, listType)).getTasks().toArray(new ClickUpTask[0]);
                 // set repo to each task - necessary to enable status update on open task dialog
                 Arrays.stream(tasks).forEach(task -> task.setRepository(this));
@@ -273,7 +277,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {}.getType();
+            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {
+            }.getType();
             return ((GetAuthorizedWorkspaces) gson.fromJson(responseBody, listType)).getTeams();
         });
     }
@@ -283,7 +288,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetSpaces>() {}.getType();
+            Type listType = new TypeToken<GetSpaces>() {
+            }.getType();
             return ((GetSpaces) gson.fromJson(responseBody, listType)).getSpaces();
         });
     }
@@ -293,7 +299,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetFolderlessLists>() {}.getType();
+            Type listType = new TypeToken<GetFolderlessLists>() {
+            }.getType();
             return ((GetFolderlessLists) gson.fromJson(responseBody, listType)).getLists();
         });
     }

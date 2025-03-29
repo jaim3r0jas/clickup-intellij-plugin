@@ -1,17 +1,13 @@
-package de.safenow.clickup.ideaclickup;
+package de.jaimerojas.clickup;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
-import com.intellij.tasks.CustomTaskState;
-import com.intellij.tasks.TaskState;
 import com.intellij.tasks.impl.BaseRepositoryType;
 import com.intellij.util.Consumer;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.util.EnumSet;
 import java.util.Objects;
-import java.util.Set;
 
 public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository> {
     private static final Logger LOG = Logger.getInstance(ClickUpRepositoryType.class);

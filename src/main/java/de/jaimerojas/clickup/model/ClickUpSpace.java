@@ -1,12 +1,14 @@
-package de.safenow.clickup.ideaclickup.model;
+package de.jaimerojas.clickup.model;
 
+import java.util.List;
 import java.util.Objects;
 
-public class ClickUpList {
+public class ClickUpSpace {
     private String id;
     private String name;
+    private List<ClickUpTaskState> statuses;
 
-    public ClickUpList(String id, String name) {
+    public ClickUpSpace(String id, String name) {
         this.id = id;
         this.name = name;
     }
@@ -32,11 +34,19 @@ public class ClickUpList {
         return name;
     }
 
+    public List<ClickUpTaskState> getStatuses() {
+        return statuses;
+    }
+
+    public void setStatuses(List<ClickUpTaskState> statuses) {
+        this.statuses = statuses;
+    }
+
     @Override
     public final boolean equals(Object o) {
-        if (!(o instanceof ClickUpList that)) return false;
+        if (!(o instanceof ClickUpSpace clickUpSpace)) return false;
 
-        return Objects.equals(id, that.id) && Objects.equals(name, that.name);
+        return Objects.equals(id, clickUpSpace.id) && Objects.equals(name, clickUpSpace.name);
     }
 
     @Override

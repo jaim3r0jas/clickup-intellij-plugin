@@ -1,7 +1,10 @@
-package de.safenow.clickup.ideaclickup.model;
+package de.jaimerojas.clickup.model;
 
-import com.intellij.tasks.*;
-import de.safenow.clickup.ideaclickup.ClickUpRepository;
+import com.intellij.tasks.Comment;
+import com.intellij.tasks.Task;
+import com.intellij.tasks.TaskRepository;
+import com.intellij.tasks.TaskType;
+import de.jaimerojas.clickup.ClickUpRepository;
 import org.jetbrains.annotations.Nls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
