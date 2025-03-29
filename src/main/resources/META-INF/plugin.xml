@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>de.jaimerojas.clickup</id>
     <name>ClickUp</name>
-    <version>1.0</version>
+    <version>0.0.3</version>
     <vendor email="jaimitorojas@gmail.com">Jaime Rojas</vendor>
 
     <description>
