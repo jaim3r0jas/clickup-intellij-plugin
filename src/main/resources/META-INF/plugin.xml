@@ -1,13 +1,27 @@
 <idea-plugin>
     <id>de.jaimerojas.clickup</id>
-    <name>ClickUp</name>
-    <version>0.0.3</version>
+    <name>ClickUp Integration</name>
     <vendor email="jaimitorojas@gmail.com">Jaime Rojas</vendor>
 
-    <description>
-        Integrate ClickUp with JetBrains IDEs for seamless task management and time tracking. Track time spent on
-        tasks and update them directly in ClickUp.
-    </description>
+    <description><![CDATA[
+        <h2>ClickUp Integration for IntelliJ Platform</h2>
+        <p>
+        Enhance your productivity by integrating ClickUp with JetBrains IDEs. Manage your tasks seamlessly and track
+        time spent on each task within your development environment.
+        <h3>Features</h3>
+        <ul>
+            <li>Fetches issues from ClickUp spaces to use as tasks.</li>
+            <li>Updates your tasks status from the IDE.</li>
+            <li>Time Tracking for Ultimate users with access to the time tracking bundle.</li>
+        </ul>
+
+        <p>
+        For now the plugin has limited functionality, but it is a work in progress. This plugin is an open source
+        project, and is not officially supported by ClickUp, so contributions and feedback are equally welcome.
+        </p>
+
+        <p>The logo is a registered trademark of ClickUp. </p>
+    ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.tasks</depends>
@@ -17,4 +31,17 @@
     <extensions defaultExtensionNs="com.intellij">
         <tasks.repositoryType implementation="de.jaimerojas.clickup.ClickUpRepositoryType"/>
     </extensions>
+
+    <change-notes><![CDATA[
+    <h2>New Features</h2>
+    <ul>
+      <li>Feature 1</li>
+      <li>Feature 2</li>
+    </ul>
+    <h2>Bug Fixes</h2>
+    <ul>
+      <li>Fixed issue 1</li>
+      <li>Fixed issue 2</li>
+    </ul>
+    ]]></change-notes>
 </idea-plugin>

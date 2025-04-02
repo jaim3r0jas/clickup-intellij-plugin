@@ -18,6 +18,10 @@ package de.jaimerojas.clickup;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import com.google.gson.reflect.TypeToken;
+import com.intellij.openapi.components.PersistentStateComponent;
+import com.intellij.openapi.components.State;
+import com.intellij.openapi.components.Storage;
+import com.intellij.openapi.components.StoragePathMacros;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressIndicator;
@@ -46,7 +50,8 @@ import java.util.*;
 import java.util.concurrent.TimeUnit;
 
 @Tag("ClickUpRepository")
-public class ClickUpRepository extends NewBaseRepositoryImpl {
+@State(name = "ClickUpRepository", storages = @Storage(StoragePathMacros.WORKSPACE_FILE))
+public class ClickUpRepository extends NewBaseRepositoryImpl implements PersistentStateComponent<ClickUpRepository.State> {
     private static final Logger LOG = Logger.getInstance(ClickUpRepository.class);
 
     public static final String API_URL = "https://api.clickup.com/api/v2";
@@ -56,6 +61,28 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     private String selectedWorkspaceId;
     private String selectedSpaceId;
     private String selectedListId;
+
+    public static class State {
+        public String selectedWorkspaceId;
+        public String selectedSpaceId;
+        public String selectedListId;
+    }
+
+    @Override
+    public @Nullable ClickUpRepository.State getState() {
+        return new State() {{
+            selectedWorkspaceId = ClickUpRepository.this.selectedWorkspaceId;
+            selectedSpaceId = ClickUpRepository.this.selectedSpaceId;
+            selectedListId = ClickUpRepository.this.selectedListId;
+        }};
+    }
+
+    @Override
+    public void loadState(@NotNull State state) {
+        this.selectedWorkspaceId = state.selectedWorkspaceId;
+        this.selectedSpaceId = state.selectedSpaceId;
+        this.selectedListId = state.selectedListId;
+    }
 
     /**
      * Serialization constructor
