@@ -33,15 +33,9 @@
     </extensions>
 
     <change-notes><![CDATA[
-    <h2>New Features</h2>
+    <h2>Bugs</h2>
     <ul>
-      <li>Feature 1</li>
-      <li>Feature 2</li>
-    </ul>
-    <h2>Bug Fixes</h2>
-    <ul>
-      <li>Fixed issue 1</li>
-      <li>Fixed issue 2</li>
+      <li>Fixed persistence of server config across IDE restarts</li>
     </ul>
     ]]></change-notes>
 </idea-plugin>
