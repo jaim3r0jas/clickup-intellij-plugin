@@ -33,9 +33,10 @@
     </extensions>
 
     <change-notes><![CDATA[
-    <h2>Bugs</h2>
+    <h3>Fixes</h3>
     <ul>
-      <li>Fixed persistence of server config across IDE restarts</li>
+      <li>Ensures config is persisted in workspace.xml</li>
+      <li>Removes unnecessary boilerplate</li>
     </ul>
     ]]></change-notes>
 </idea-plugin>
