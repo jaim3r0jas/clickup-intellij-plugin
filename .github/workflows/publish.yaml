@@ -81,9 +81,9 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Create SemVer Tag
+      - name: Push SemVer Tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-        run: ./gradlew createSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
+        run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
       - name: Publish plugin
         if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
         run: ./gradlew publishPlugin -x test
