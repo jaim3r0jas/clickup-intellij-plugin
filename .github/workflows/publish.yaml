@@ -27,10 +27,12 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+      - name: Assemble and generate version
+        run: ./gradlew assemble
       - name: Run tests
         run: ./gradlew test
       - name: Build and sign plugin
-        run: ./gradlew buildPlugin signPlugin
+        run: ./gradlew buildPlugin signPlugin -x test
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
@@ -45,7 +47,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: |
-            ~/.gradle/caches
+            ~/.gradle/caches.
             ~/.gradle/wrapper
             ~/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
@@ -57,8 +59,10 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+      - name: Assemble and generate version
+        run: ./gradlew assemble
       - name: Publish plugin
-        run: ./gradlew publishPlugin
+        run: ./gradlew publishPlugin -x test
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}

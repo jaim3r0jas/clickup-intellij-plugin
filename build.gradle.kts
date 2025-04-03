@@ -1,10 +1,13 @@
+import java.nio.charset.StandardCharsets
+
 plugins {
     id("java")
     id("org.jetbrains.intellij.platform") version "2.5.0"
+    id("com.javiersc.semver") version "0.7.0"
 }
 
 group = "de.jaimerojas"
-version = "0.0.8"
+version = "0.1.0"
 
 repositories {
     mavenCentral()
@@ -29,7 +32,7 @@ tasks {
     }
 
     patchPluginXml {
-        version = project.version.toString()
+        version = if (file("build/semver/version.txt").exists()) file("build/semver/version.txt").readLines(StandardCharsets.UTF_8).first() else project.version.toString()
         sinceBuild.set("241")
         untilBuild.set("251.*")
     }
