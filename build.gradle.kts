@@ -1,25 +1,24 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij") version "1.17.4"
+    id("org.jetbrains.intellij.platform") version "2.5.0"
 }
 
 group = "de.jaimerojas"
-version = "0.0.7"
+version = "0.0.8"
 
 repositories {
     mavenCentral()
+
+    intellijPlatform {
+        defaultRepositories()
+    }
 }
 
-// Configure Gradle IntelliJ Plugin
-// Read more: https://plugins.jetbrains.com/docs/intellij/tools-gradle-intellij-plugin.html
-intellij {
-    version.set("2024.1.7")
-
-    // Target IDE Platform
-    type.set("IC")
-    type.set("IU")
-
-    plugins.set(listOf("tasks"))
+dependencies {
+    intellijPlatform {
+        intellijIdeaCommunity("2024.1.7")
+        bundledPlugin("com.intellij.tasks")
+    }
 }
 
 tasks {
@@ -30,7 +29,7 @@ tasks {
     }
 
     patchPluginXml {
-        version.set(project.version.toString())
+        version = project.version.toString()
         sinceBuild.set("241")
         untilBuild.set("251.*")
     }
@@ -49,7 +48,6 @@ tasks {
         jvmArgs(listOf("-Xms512m", "-Xmx1g"))
         systemProperties(
             "org.gradle.logging.level" to "DEBUG",
-            // increase loggingh level to see all intellij Logger is logging
             "idea.log.level" to "DEBUG",
         )
     }
