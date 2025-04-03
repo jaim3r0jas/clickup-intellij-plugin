@@ -5,6 +5,29 @@ on:
     branches:
       - "**"
   workflow_dispatch:
+    inputs:
+      scope:
+        description: 'Scope'
+        required: true
+        type: choice
+        default: 'auto'
+        options:
+          - 'patch'
+          - 'minor'
+          - 'major'
+          - 'auto'
+      stage:
+        description: 'Stage'
+        required: true
+        type: choice
+        default: 'auto'
+        options:
+          - 'alpha'
+          - 'beta'
+          - 'rc'
+          - 'final'
+          - 'snapshot'
+          - 'auto'
 jobs:
   build:
     if: github.ref != 'refs/heads/main' && github.event_name == 'pull_request'
@@ -39,7 +62,6 @@ jobs:
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
   deploy:
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
 
     steps:
@@ -59,9 +81,11 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Assemble and generate version
-        run: ./gradlew assemble
+      - name: Create SemVer Tag
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+        run: ./gradlew createSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
       - name: Publish plugin
+        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
         run: ./gradlew publishPlugin -x test
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
