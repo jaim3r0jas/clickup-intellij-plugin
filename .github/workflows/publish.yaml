@@ -15,7 +15,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'jetbrains'
-      - run: ./gradlew build
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+      - name: Build plugin
+        run: ./gradlew build
 
   deploy:
     needs: build
@@ -27,7 +30,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'jetbrains'
-      - run: ./gradlew intellij:publishPlugin
+      - name: Publish plugin to Jetbrains Marketplace
+        run: ./gradlew intellij:publishPlugin
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
