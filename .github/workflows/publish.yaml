@@ -3,11 +3,11 @@ name: Build and Publish to Jetbrains Marketplace
 on:
   pull_request:
     branches:
-      - main
+      - "**"
   workflow_dispatch:
-
 jobs:
   build:
+    if: github.ref != 'refs/heads/main' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
 
     steps:
@@ -36,11 +36,9 @@ jobs:
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-
   deploy:
     if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
-    needs: build
 
     steps:
       - uses: actions/checkout@v4
