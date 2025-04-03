@@ -11,6 +11,7 @@ keys/
 .idea/jarRepositories.xml
 .idea/compiler.xml
 .idea/libraries/
+.intellijPlatform/
 *.iws
 *.iml
 *.ipr
