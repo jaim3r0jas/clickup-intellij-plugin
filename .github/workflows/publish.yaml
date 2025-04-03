@@ -54,9 +54,6 @@ jobs:
         run: ./gradlew assemble
       - name: Run tests
         run: ./gradlew test
-      - name: Create SemVer Tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
-        run: ./gradlew createSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
       - name: Build and sign plugin
         run: ./gradlew buildPlugin signPlugin -x test
         env:
@@ -85,6 +82,8 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
+      - name: Git Status
+        run: git status
       - name: Create and push semver tag
         run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
       - name: Publish plugin
