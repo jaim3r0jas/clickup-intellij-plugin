@@ -30,6 +30,8 @@ jobs:
         with:
           java-version: '17'
           distribution: 'jetbrains'
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
       - name: Publish plugin to Jetbrains Marketplace
         run: ./gradlew intellij:publishPlugin
         env:
