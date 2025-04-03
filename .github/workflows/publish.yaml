@@ -1,9 +1,10 @@
 name: Build and Publish to Jetbrains Marketplace
 
 on:
-  push:
+  pull_request:
     branches:
       - main
+  workflow_dispatch:
 
 jobs:
   build:
@@ -16,6 +17,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -25,33 +27,20 @@ jobs:
           distribution: 'jetbrains'
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
-      - name: Build plugin
-        run: ./gradlew build
-
-  test:
-    needs: build
-    runs-on: ubuntu-latest
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'jetbrains'
       - name: Run tests
         run: ./gradlew test
+      - name: Build and sign plugin
+        run: ./gradlew buildPlugin signPlugin
+        env:
+          CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
+          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
+          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
 
   deploy:
-    needs: test
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
+    needs: build
 
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +49,7 @@ jobs:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
+            ~/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
@@ -67,7 +57,7 @@ jobs:
         with:
           java-version: '17'
           distribution: 'jetbrains'
-      - name: Publish plugin to Jetbrains Marketplace
+      - name: Publish plugin
         run: ./gradlew publishPlugin
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
