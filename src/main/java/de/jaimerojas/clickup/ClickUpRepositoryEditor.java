@@ -83,6 +83,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
             @Override
             public void focusLost(FocusEvent e) {
                 if (StringUtil.isNotEmpty(myRepository.getPassword())) {
+                    myTestButton.setEnabled(true);
                     loadWorkspaces();
                     loadSpaces();
                     loadLists();
@@ -104,7 +105,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         installListener(spaceDropdown);
         installListener(listDropdown);
 
-        myTestButton.setEnabled(myRepository.isConfigured());
+        myTestButton.setEnabled(StringUtil.isNotEmpty(myRepository.getPassword()));
     }
 
     @Override
