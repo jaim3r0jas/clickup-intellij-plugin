@@ -11,6 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.GITHUB_REF }}
+      - name: Log version info
+        run: |
+          echo "Version: ${{ env.GITHUB_REF#refs/tags/v } }"
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -25,10 +31,10 @@ jobs:
         with:
           java-version: '17'
           distribution: 'jetbrains'
-      - name: Build, sign, verify, and publish plugin
-        run: ./gradlew buildPlugin signPlugin verifyPlugin publishPlugin -x test
+      - name: Publish plugin
+        run: ./gradlew publishPlugin -x test
         env:
-          PLUGIN_VERSION: ${{ env.GITHUB_REF }}
+          PLUGIN_VERSION: ${{ env.GITHUB_REF#refs/tags/v } }
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
