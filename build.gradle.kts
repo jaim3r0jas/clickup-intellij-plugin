@@ -1,5 +1,6 @@
 plugins {
-    id("java")
+    java
+    jacoco
     id("org.jetbrains.intellij.platform") version "2.5.0"
     id("com.javiersc.semver") version "0.7.0"
 }
@@ -20,6 +21,7 @@ dependencies {
         intellijIdeaCommunity("2024.1.7")
         bundledPlugin("com.intellij.tasks")
     }
+    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
 }
 
 tasks {
@@ -30,7 +32,7 @@ tasks {
     }
 
     patchPluginXml {
-        pluginVersion = providers.environmentVariable("LATEST_TAG")
+        pluginVersion = providers.environmentVariable("LATEST_TAG").getOrElse(project.version.toString())
         sinceBuild = "241"
         untilBuild = "251.*"
     }
