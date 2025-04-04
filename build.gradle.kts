@@ -2,7 +2,6 @@ plugins {
     java
     jacoco
     id("org.jetbrains.intellij.platform") version "2.5.0"
-    id("com.javiersc.semver") version "0.7.0"
 }
 
 group = "de.jaimerojas"
@@ -40,7 +39,7 @@ tasks {
     }
 
     patchPluginXml {
-        pluginVersion = providers.environmentVariable("LATEST_TAG").getOrElse(project.version.toString())
+        pluginVersion = providers.environmentVariable("PLUGIN_VERSION").getOrElse(project.version.toString())
         sinceBuild = "241"
         untilBuild = "251.*"
     }
