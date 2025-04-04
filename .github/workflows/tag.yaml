@@ -2,9 +2,12 @@ name: Tag
 
 on:
   workflow_run:
-    workflows: ["Build"]
+    workflows: [ "Build" ]
     types:
       - completed
+
+permissions:
+  contents: write # for creating tags
 
 jobs:
   analyze-coverage:
@@ -12,8 +15,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
-
       - name: Download coverage report
         uses: actions/download-artifact@v4
         with:
@@ -29,6 +30,13 @@ jobs:
             echo "Coverage is insufficient to continue"
             exit 1
           fi
+
+  generate-tag:
+    runs-on: ubuntu-latest
+    needs: analyze-coverage
+
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Generate and push semver tag
         if: steps.check-coverage.outcome == 'success'
