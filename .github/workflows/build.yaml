@@ -23,17 +23,6 @@ jobs:
       - name: Run tests and generate coverage report
         run: ./gradlew test jacocoTestReport
 
-      - name: Add coverage to PR
-        id: jacoco
-        uses: madrapps/jacoco-report@v1.7.1
-        with:
-          paths: |
-            ${{ github.workspace }}/**/build/reports/jacoco/prodNormalDebugCoverage/prodNormalDebugCoverage.xml,
-            ${{ github.workspace }}/**/build/reports/jacoco/**/debugCoverage.xml
-          token: ${{ secrets.GITHUB_TOKEN }}
-          min-coverage-overall: 40
-          min-coverage-changed-files: 60
-
       - name: Upload test results
         if: failure()
         uses: actions/upload-artifact@v4
@@ -45,7 +34,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: build/reports/jacoco/test/html
+          path: build/reports/jacoco/test
 
   analyze-coverage:
     runs-on: ubuntu-latest
@@ -62,7 +51,7 @@ jobs:
         id: jacoco
         uses: madrapps/jacoco-report@v1.7.1
         with:
-          paths: "coverage-report/index.html"
+          paths: "coverage-report/jacocoTestReport.xml"
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 40
           min-coverage-changed-files: 60

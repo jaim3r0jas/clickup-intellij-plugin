@@ -31,6 +31,14 @@ tasks {
         targetCompatibility = "17"
     }
 
+    jacocoTestReport {
+        reports {
+            xml.required = true
+            csv.required = false
+            html.required = true
+        }
+    }
+
     patchPluginXml {
         pluginVersion = providers.environmentVariable("LATEST_TAG").getOrElse(project.version.toString())
         sinceBuild = "241"
