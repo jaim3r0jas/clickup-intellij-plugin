@@ -27,9 +27,6 @@ on:
           - breaking
           - feature
           - bugfix
-permissions:
-  contents: write # for creating tags
-  pull-requests: write # for commenting on PRs
 
 jobs:
 

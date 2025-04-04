@@ -6,7 +6,12 @@ on:
     types:
       - completed
 
+permissions:
+  contents: write # for creating tags
+  pull-requests: write # for commenting on PRs
+
 jobs:
+
   tag:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }} && github.event_name == 'workflow_dispatch'
