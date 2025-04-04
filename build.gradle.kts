@@ -1,5 +1,3 @@
-import java.nio.charset.StandardCharsets
-
 plugins {
     id("java")
     id("org.jetbrains.intellij.platform") version "2.5.0"
@@ -32,19 +30,19 @@ tasks {
     }
 
     patchPluginXml {
-        version = if (file("build/semver/version.txt").exists()) file("build/semver/version.txt").readLines(StandardCharsets.UTF_8).first() else project.version.toString()
-        sinceBuild.set("241")
-        untilBuild.set("251.*")
+        pluginVersion = providers.environmentVariable("LATEST_TAG")
+        sinceBuild = "241"
+        untilBuild = "251.*"
     }
 
     signPlugin {
-        certificateChain.set(providers.environmentVariable("CERTIFICATE_CHAIN"))
-        privateKey.set(providers.environmentVariable("PRIVATE_KEY"))
-        password.set(providers.environmentVariable("PRIVATE_KEY_PASSWORD"))
+        certificateChain = providers.environmentVariable("CERTIFICATE_CHAIN")
+        privateKey = providers.environmentVariable("PRIVATE_KEY")
+        password = providers.environmentVariable("PRIVATE_KEY_PASSWORD")
     }
 
     publishPlugin {
-        token.set(providers.environmentVariable("PUBLISH_TOKEN"))
+        token = providers.environmentVariable("PUBLISH_TOKEN")
     }
 
     runIde {

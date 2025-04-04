@@ -1,0 +1,44 @@
+name: Build
+
+on:
+  push:
+    branches:
+      - "feature/**"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+            build/reports/tests
+            build/reports/jacoco
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'jetbrains'
+
+      - name: Run tests and generate coverage report
+        run: ./gradlew test jacocoTestReport
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: build/reports/tests/test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: build/reports/jacoco/test/html
