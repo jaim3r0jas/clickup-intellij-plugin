@@ -5,6 +5,28 @@ on:
     workflows: [ "Build" ]
     types:
       - completed
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Semantic versioning stage'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+      scope:
+        description: 'Semantic versioning scope'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - breaking
+          - feature
+          - bugfix
 
 permissions:
   contents: write # for creating tags
@@ -32,6 +54,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'success' && github.event_name == 'workflow_dispatch'
 
     steps:
       - name: Checkout latest tag

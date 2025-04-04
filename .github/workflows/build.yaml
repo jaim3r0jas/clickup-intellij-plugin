@@ -5,28 +5,6 @@ on:
     branches:
       - "feature/**"
       - "main"
-  workflow_dispatch:
-    inputs:
-      stage:
-        description: 'Semantic versioning stage'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - major
-          - minor
-          - patch
-      scope:
-        description: 'Semantic versioning scope'
-        required: true
-        default: 'auto'
-        type: choice
-        options:
-          - auto
-          - breaking
-          - feature
-          - bugfix
 
 jobs:
 
