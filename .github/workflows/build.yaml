@@ -42,23 +42,18 @@ jobs:
           name: coverage-report
           path: build/reports/jacoco/test
 
-      - name: Download coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage-report
-          path: coverage-report
-
       - name: Add coverage to PR
         id: jacoco
         uses: madrapps/jacoco-report@v1.7.1
         with:
-          paths: "coverage-report/jacocoTestReport.xml"
+          paths: build/reports/jacoco/test/jacocoTestReport.xml
           token: ${{ secrets.GITHUB_TOKEN }}
           min-coverage-overall: 40
           min-coverage-changed-files: 60
 
       - name: Get the Coverage info
         run: |
+          echo "See coverage report here: ${{ steps.jacoco.outputs.coverage-url }}"
           echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
           echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
 
