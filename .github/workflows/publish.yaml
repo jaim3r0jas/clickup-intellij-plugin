@@ -2,7 +2,7 @@ name: Publish
 
 on:
   workflow_run:
-    workflows: ["Build"]
+    workflows: [ "Build" ]
     types:
       - completed
 
@@ -12,10 +12,6 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Get latest tag
         id: get_tag
         uses: actions/github-script@v6
@@ -32,9 +28,13 @@ jobs:
         run: echo "LATEST_TAG=${{ steps.get_tag.outputs.result }}" >> $GITHUB_ENV
 
       - name: Checkout latest tag
-        run: git checkout $LATEST_TAG
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ env.LATEST_TAG }}
 
-      - uses: actions/cache@v4
+      - name: Cache Gradle
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -43,7 +43,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
-      - uses: actions/setup-java@v4
+      - name: Set up JDK
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'jetbrains'
