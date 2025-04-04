@@ -84,22 +84,3 @@ jobs:
         with:
           script: |
             core.setFailed('Overall coverage is less than 80%!')
-
-  tag:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-    needs: build
-
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'jetbrains'
-          cache: 'gradle'
-      - name: Generate and push semver tag
-        #        if: steps.check-coverage.outcome == 'success'
-        run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
-
-      - name: Set tag as environment variable
-        run: echo "LATEST_TAG=$(./gradlew printSemver | grep 'semver for' | awk '{print $4}')" >> $GITHUB_ENV
