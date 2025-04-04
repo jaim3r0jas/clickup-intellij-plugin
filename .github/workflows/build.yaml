@@ -4,31 +4,48 @@ on:
   push:
     branches:
       - "feature/**"
+      - "main"
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Semantic versioning stage'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+      scope:
+        description: 'Semantic versioning scope'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - breaking
+          - feature
+          - bugfix
+permissions:
+  contents: write # for creating tags
+  pull-requests: write # for commenting on PRs
 
 jobs:
+
   build:
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-            build/reports/tests
-            build/reports/jacoco
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'jetbrains'
+          cache: 'gradle'
 
-      - name: Run tests and generate coverage report
-        run: ./gradlew test jacocoTestReport
+      - name: Run tests
+        run: ./gradlew test
 
       - name: Upload test results
         if: failure()
@@ -37,8 +54,49 @@ jobs:
           name: test-results
           path: build/reports/tests/test
 
+      - name: Generate coverage report
+        run: ./gradlew jacocoTestReport
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: build/reports/jacoco/test/html
+          path: build/reports/jacoco/test
+
+      - name: Add coverage to PR
+        id: jacoco
+        uses: madrapps/jacoco-report@v1.7.1
+        with:
+          paths: build/reports/jacoco/test/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: 40
+          min-coverage-changed-files: 60
+
+      - name: Get the Coverage info
+        run: |
+          echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
+          echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
+
+      - name: Fail PR if overall coverage is less than 80%
+        # if: ${{ steps.jacoco.outputs.coverage-overall < 80.0 }}
+        if: false
+        uses: actions/github-script@v6
+        with:
+          script: |
+            core.setFailed('Overall coverage is less than 80%!')
+
+  tag:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'jetbrains'
+          cache: 'gradle'
+      - name: Generate and push semver tag
+        #        if: steps.check-coverage.outcome == 'success'
+        run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
