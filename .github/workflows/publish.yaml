@@ -5,15 +5,12 @@ on:
     tags:
       - 'v*.*.*'
 
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout latest tag
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ env.LATEST_TAG }}
+      - uses: actions/checkout@v4
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -31,7 +28,7 @@ jobs:
       - name: Build, sign, verify, and publish plugin
         run: ./gradlew buildPlugin signPlugin verifyPlugin publishPlugin -x test
         env:
-          PLUGIN_VERSION: ${{ env.LATEST_TAG }}
+          PLUGIN_VERSION: ${{ env.GITHUB_REF }}
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
