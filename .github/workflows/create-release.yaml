@@ -1,0 +1,32 @@
+name: Create Release
+
+on:
+  workflow_run:
+    workflows: ["Publish"]
+    types:
+      - completed
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest tag
+        id: get_tag
+        run: echo "LATEST_TAG=$(git describe --tags `git rev-list --tags --max-count=1`)" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        with:
+          tag_name: ${{ env.LATEST_TAG }}
+          release_name: Release ${{ env.LATEST_TAG }}
+          body: |
+            Release notes for ${{ env.LATEST_TAG }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
