@@ -12,21 +12,6 @@ jobs:
     # if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
-      - name: Get latest tag
-        id: get_tag
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const latestTag = await github.repos.getLatestRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo
-            });
-            return latestTag.data.tag_name;
-          result-encoding: string
-
-      - name: Set tag as environment variable
-        run: echo "LATEST_TAG=${{ steps.get_tag.outputs.result }}" >> $GITHUB_ENV
-
       - name: Checkout latest tag
         uses: actions/checkout@v4
         with:
