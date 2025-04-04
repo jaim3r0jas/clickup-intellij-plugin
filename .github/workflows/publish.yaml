@@ -46,7 +46,7 @@ jobs:
 
       - name: Set tag as environment variable
         run: |
-          echo $(./gradlew printSemver | grep 'semver for' | awk '{print $4}')
+          ./gradlew printSemver | grep 'semver for' | awk '{print $4}'
           echo "LATEST_TAG=$(./gradlew printSemver | grep 'semver for' | awk '{print $4}')" >> $GITHUB_ENV
 
       - name: Generate and push semver tag
