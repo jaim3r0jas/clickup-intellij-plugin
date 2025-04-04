@@ -1,4 +1,4 @@
-name: Publish ${{ env.GITHUB_REF_NAME }}
+name: Publish
 
 on:
   create:
