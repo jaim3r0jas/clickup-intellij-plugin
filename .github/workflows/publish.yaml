@@ -1,10 +1,6 @@
 name: Publish
 
 on:
-  workflow_run:
-    workflows: [ "Build" ]
-    types:
-      - completed
   workflow_dispatch:
     inputs:
       stage:
@@ -36,7 +32,9 @@ jobs:
 
   tag:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' && github.event_name == 'workflow_dispatch'
+    # if: github.event_name == 'workflow_dispatch'
+    # if `workflow_dispatch` and Build workflow is completed
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'workflow_run' && github.event.workflow == 'Build' && github.event.action == 'completed')
 
     steps:
       - uses: actions/checkout@v4
@@ -54,7 +52,7 @@ jobs:
 
   publish:
     runs-on: ubuntu-latest
-    if: github.event.workflow_run.conclusion == 'success' && github.event_name == 'workflow_dispatch'
+    needs: tag
 
     steps:
       - name: Checkout latest tag
