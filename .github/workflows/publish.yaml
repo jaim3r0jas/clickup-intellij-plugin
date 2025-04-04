@@ -1,4 +1,4 @@
-name: Publish
+name: Publish ${{ env.GITHUB_REF_NAME }}
 
 on:
   create:
@@ -32,7 +32,7 @@ jobs:
           java-version: '17'
           distribution: 'jetbrains'
       - name: Publish plugin
-        run: ./gradlew publishPlugin -x test
+        run: ./gradlew patchPluginXml publishPlugin -x test
         env:
           PLUGIN_VERSION: "${{ env.GITHUB_REF_NAME }}"
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
