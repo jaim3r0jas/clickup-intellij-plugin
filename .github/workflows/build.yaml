@@ -100,3 +100,6 @@ jobs:
       - name: Generate and push semver tag
         #        if: steps.check-coverage.outcome == 'success'
         run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
+
+      - name: Set tag as environment variable
+        run: echo "LATEST_TAG=$(./gradlew printSemver | grep 'semver for' | awk '{print $4}')" >> $GITHUB_ENV
