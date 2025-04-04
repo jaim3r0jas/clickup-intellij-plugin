@@ -5,7 +5,6 @@ on:
     tags:
       - 'v*.*.*'
 
-
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -15,7 +14,9 @@ jobs:
           fetch-depth: 0
           ref: ${{ env.GITHUB_REF }}
       - name: Log version info
-        run: echo $GITHUB_REF
+        run: |
+          echo $GITHUB_REF
+          echo $GITHUB_REF_NAME
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
