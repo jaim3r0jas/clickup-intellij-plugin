@@ -1,85 +1,55 @@
-name: Build and Publish to Jetbrains Marketplace
+name: Publish
 
 on:
-  pull_request:
-    branches:
-      - "**"
-  workflow_dispatch:
-    inputs:
-      scope:
-        description: 'Scope'
-        required: true
-        type: choice
-        default: 'auto'
-        options:
-          - 'patch'
-          - 'minor'
-          - 'major'
-          - 'auto'
-      stage:
-        description: 'Stage'
-        required: true
-        type: choice
-        default: 'auto'
-        options:
-          - 'alpha'
-          - 'beta'
-          - 'rc'
-          - 'final'
-          - 'snapshot'
-          - 'auto'
+  workflow_run:
+    workflows: ["Tag"]
+    types:
+      - completed
+
 jobs:
-  build:
-    if: github.ref != 'refs/heads/main' && github.event_name == 'pull_request'
+  publish:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get latest tag
+        id: get_tag
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const latestTag = await github.repos.getLatestRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            return latestTag.data.tag_name;
+          result-encoding: string
+
+      - name: Set tag as environment variable
+        run: echo "LATEST_TAG=${{ steps.get_tag.outputs.result }}" >> $GITHUB_ENV
+
+      - name: Checkout latest tag
+        run: git checkout $LATEST_TAG
+
       - uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-            ~/build
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-      - uses: actions/setup-java@v4
-        with:
-          java-version: '17'
-          distribution: 'jetbrains'
-      - name: Run tests
-        run: ./gradlew test
-      - name: Build and sign plugin
-        run: ./gradlew buildPlugin signPlugin -x test
-        env:
-          CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
-          PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
-  deploy:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
 
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches.
-            ~/.gradle/wrapper
-            ~/build
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-          restore-keys: |
-            ${{ runner.os }}-gradle-
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'jetbrains'
-      - name: Create and push semver tag
-        run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
-      - name: Publish plugin
-        run: ./gradlew publishPlugin -x test
+
+      - name: Build, sign, verify, and publish plugin
+        run: ./gradlew buildPlugin signPlugin verifyPlugin publishPlugin -x test
         env:
           CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
