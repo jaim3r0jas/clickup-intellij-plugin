@@ -49,7 +49,7 @@ jobs:
 
   analyze-coverage:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    needs: build
 
     steps:
       - name: Download coverage report
