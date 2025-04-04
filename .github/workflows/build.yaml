@@ -5,7 +5,28 @@ on:
     branches:
       - "feature/**"
       - "main"
-
+  workflow_dispatch:
+    inputs:
+      stage:
+        description: 'Semantic versioning stage'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - major
+          - minor
+          - patch
+      scope:
+        description: 'Semantic versioning scope'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - breaking
+          - feature
+          - bugfix
 permissions:
   contents: write # for creating tags
   pull-requests: write # for commenting on PRs
@@ -64,6 +85,12 @@ jobs:
           script: |
             core.setFailed('Overall coverage is less than 80%!')
 
+  tag:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+    needs: build
+
+    steps:
       - name: Generate and push semver tag
-#        if: steps.check-coverage.outcome == 'success'
-        run: ./gradlew pushSemverTag -Psemver.stage=auto -Psemver.scope=auto
+        #        if: steps.check-coverage.outcome == 'success'
+        run: ./gradlew pushSemverTag -Psemver.stage=${{ github.event.inputs.stage }} -Psemver.scope=${{ github.event.inputs.scope }}
