@@ -9,8 +9,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write # for commenting on PRs
 
     steps:
       - uses: actions/checkout@v4
@@ -42,6 +40,8 @@ jobs:
   analyze-coverage:
     runs-on: ubuntu-latest
     needs: build
+    permissions:
+      pull-requests: write # for commenting on PRs
 
     steps:
       - name: Download coverage report
