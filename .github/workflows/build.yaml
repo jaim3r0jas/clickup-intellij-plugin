@@ -6,7 +6,12 @@ on:
       - "feature/**"
       - "main"
 
+permissions:
+  contents: write # for creating tags
+  pull-requests: write # for commenting on PRs
+
 jobs:
+
   build:
     runs-on: ubuntu-latest
 
@@ -40,8 +45,6 @@ jobs:
   analyze-coverage:
     runs-on: ubuntu-latest
     needs: build
-    permissions:
-      pull-requests: write # for commenting on PRs
 
     steps:
       - name: Download coverage report
@@ -71,11 +74,10 @@ jobs:
         with:
           script: |
             core.setFailed('Overall coverage is less than 80%!')
+
   generate-tag:
     runs-on: ubuntu-latest
     needs: analyze-coverage
-    permissions:
-      contents: write # for creating tags
 
     steps:
       - uses: actions/checkout@v4
