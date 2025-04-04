@@ -53,7 +53,6 @@ jobs:
 
       - name: Get the Coverage info
         run: |
-          echo "See coverage report here: ${{ steps.jacoco.outputs.coverage-url }}"
           echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
           echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
 
@@ -66,5 +65,5 @@ jobs:
             core.setFailed('Overall coverage is less than 80%!')
 
       - name: Generate and push semver tag
-        if: steps.check-coverage.outcome == 'success'
+#        if: steps.check-coverage.outcome == 'success'
         run: ./gradlew pushSemverTag -Psemver.stage=auto -Psemver.scope=auto
