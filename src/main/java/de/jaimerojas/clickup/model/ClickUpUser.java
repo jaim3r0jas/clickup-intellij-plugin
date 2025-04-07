@@ -15,59 +15,59 @@
 */
 package de.jaimerojas.clickup.model;
 
-import java.util.List;
-import java.util.Objects;
+import org.jetbrains.annotations.NotNull;
 
-public class ClickUpWorkspace {
+public class ClickUpUser {
+
+    @NotNull
     private String id;
-    private String name;
-    private List<ClickUpTeamMember> members;
+    private String username;
+    private String email;
 
-    public ClickUpWorkspace(String id, String name) {
+    public ClickUpUser(String id, String username, String email) {
         this.id = id;
-        this.name = name;
+        this.username = username;
+        this.email = email;
     }
 
-    public String getId() {
+    public @NotNull String getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(@NotNull String id) {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
+    public String getUsername() {
+        return username;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public List<ClickUpTeamMember> getMembers() {
-        return members;
+    public String getEmail() {
+        return email;
     }
 
-    public void setMembers(List<ClickUpTeamMember> members) {
-        this.members = members;
+    public void setEmail(String email) {
+        this.email = email;
     }
 
     @Override
     public String toString() {
-        return this.name;
+        return username;
     }
 
     @Override
     public final boolean equals(Object o) {
-        if (!(o instanceof ClickUpWorkspace clickUpWorkspace)) return false;
+        if (!(o instanceof ClickUpUser that)) return false;
 
-        return Objects.equals(id, clickUpWorkspace.id) && Objects.equals(name, clickUpWorkspace.name);
+        return id.equals(that.id);
     }
 
     @Override
     public int hashCode() {
-        int result = Objects.hashCode(id);
-        result = 31 * result + Objects.hashCode(name);
-        return result;
+        return id.hashCode();
     }
 }
