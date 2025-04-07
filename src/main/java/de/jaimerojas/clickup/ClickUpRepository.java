@@ -41,7 +41,6 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Type;
-import java.net.URI;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
@@ -56,6 +55,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     private String selectedWorkspaceId;
     private String selectedSpaceId;
     private String selectedListId;
+    private String selectedAssigneeId;
 
     /**
      * Serialization constructor
@@ -75,6 +75,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
         setSelectedSpaceId(other.getSelectedSpaceId());
         setSelectedListId(other.getSelectedListId());
+        setSelectedAssigneeId(other.getSelectedAssigneeId());
     }
 
     @Override
@@ -84,7 +85,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
         return Objects.equals(selectedWorkspaceId, that.selectedWorkspaceId)
                 && Objects.equals(selectedSpaceId, that.selectedSpaceId)
-                && Objects.equals(selectedListId, that.selectedListId);
+                && Objects.equals(selectedListId, that.selectedListId)
+                && Objects.equals(selectedAssigneeId, that.selectedAssigneeId);
     }
 
     @Override
@@ -92,6 +94,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         int result = Objects.hashCode(selectedWorkspaceId);
         result = 31 * result + Objects.hashCode(selectedSpaceId);
         result = 31 * result + Objects.hashCode(selectedListId);
+        result = 31 * result + Objects.hashCode(selectedAssigneeId);
         return result;
     }
 
@@ -123,22 +126,30 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     @Override
-    public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed, @NotNull ProgressIndicator cancelled) throws Exception {
+    public Task[] getIssues(
+            @Nullable String query,
+            int offset,
+            int limit, // ClickUp API does not support page size
+            boolean withClosed,
+            @NotNull ProgressIndicator cancelled) throws Exception {
         LOG.info("getIssues called with listId: " + selectedListId);
+        LOG.info("getIssues called with offset: " + offset);
+        LOG.info("getIssues called with limit: " + limit);
 
-        // FIXME: move archived flag to a checkbox in the settings
-        HttpGet httpGet = new HttpGet(API_URL + "/list/" + selectedListId + "/task?archived=false");
+        String getIssuesUrl = API_URL + "/list/" + selectedListId + "/task?archived=false";
 
-        if (query != null && !query.isEmpty()) {
-            httpGet.setURI(new URI(httpGet.getURI().toString() + "&assignees[]=" + query));
+        int clickUpLimit = 100;
+        int page = (offset / clickUpLimit) - 1; // first page is 0
+        if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
+            getIssuesUrl += "&page=" + page + "&assignees[]=" + selectedAssigneeId;
         }
+        HttpGet httpGet = new HttpGet(getIssuesUrl);
         httpGet.addHeader("Authorization", myPassword);
 
         try {
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
-                Type listType = new TypeToken<GetTasks>() {
-                }.getType();
+                Type listType = new TypeToken<GetTasks>() {}.getType();
                 final ClickUpTask[] tasks = ((GetTasks) gson.fromJson(responseBody, listType)).getTasks().toArray(new ClickUpTask[0]);
                 // set repo to each task - necessary to enable status update on open task dialog
                 Arrays.stream(tasks).forEach(task -> task.setRepository(this));
@@ -250,6 +261,15 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         this.selectedListId = selectedListId;
     }
 
+    @Attribute("SelectedAssigneeId")
+    public String getSelectedAssigneeId() {
+        return selectedAssigneeId;
+    }
+
+    public void setSelectedAssigneeId(String selectedAssigneeId) {
+        this.selectedAssigneeId = selectedAssigneeId;
+    }
+
     private @NotNull HttpPost trackTimeSpend(@NotNull String timeSpent, /* not supported via ClickUp API v2 */ @NotNull String ignore, String taskId) throws UnsupportedEncodingException {
         String url = API_URL + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
@@ -286,8 +306,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {
-            }.getType();
+            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {}.getType();
             return ((GetAuthorizedWorkspaces) gson.fromJson(responseBody, listType)).getTeams();
         });
     }
@@ -297,8 +316,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetSpaces>() {
-            }.getType();
+            Type listType = new TypeToken<GetSpaces>() {}.getType();
             return ((GetSpaces) gson.fromJson(responseBody, listType)).getSpaces();
         });
     }
@@ -308,8 +326,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetFolderlessLists>() {
-            }.getType();
+            Type listType = new TypeToken<GetFolderlessLists>() {}.getType();
             return ((GetFolderlessLists) gson.fromJson(responseBody, listType)).getLists();
         });
     }
