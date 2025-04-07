@@ -1,24 +1,19 @@
 name: Publish
 
 on:
-  workflow_run:
-    workflows: [ "Build" ]
-    types:
-      - completed
+  create:
+    tags:
+      - 'v*.*.*'
 
 jobs:
   publish:
     runs-on: ubuntu-latest
-    # if: ${{ github.event.workflow_run.conclusion == 'success' }}
-
     steps:
-      - name: Checkout latest tag
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ env.LATEST_TAG }}
-
-      - name: Cache Gradle
+      - name: Gradle cache
         uses: actions/cache@v4
         with:
           path: |
@@ -27,18 +22,24 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
           restore-keys: |
             ${{ runner.os }}-gradle-
-
-      - name: Set up JDK
+      - name: Setup JDK
         uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'jetbrains'
-
-      - name: Build, sign, verify, and publish plugin
-        run: ./gradlew buildPlugin signPlugin verifyPlugin publishPlugin -x test
+      - name: Publish plugin
+        run: ./gradlew patchPluginXml publishPlugin -x test
         env:
-          LATEST_TAG: ${{ env.LATEST_TAG }}
-          CERTIFICATE_CHAIN: ${{ secrets.CCERTIFICATE_CHAIN }}
+          PLUGIN_VERSION: ${{ github.ref_name }}
+          CERTIFICATE_CHAIN: ${{ secrets.CERTIFICATE_CHAIN }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           PRIVATE_KEY_PASSWORD: ${{ secrets.PRIVATE_KEY_PASSWORD }}
           PUBLISH_TOKEN: ${{ secrets.PUBLISH_TOKEN }}
+      - name: Create release
+        uses: softprops/action-gh-release@v1
+        with:
+          generate_release_notes: true
+          files: |
+            build/distributions/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
