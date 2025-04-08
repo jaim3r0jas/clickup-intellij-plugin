@@ -196,12 +196,15 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
     @Override
     public @NotNull Set<CustomTaskState> getAvailableTaskStates(@NotNull Task task) throws Exception {
-        Set<CustomTaskState> taskStatuses = new HashSet<>();
-        for (ClickUpSpace space : fetchSpaces(selectedWorkspaceId)) {
-            if (space.getId().equals(selectedSpaceId)) {
-                space.getStatuses().forEach(state ->
-                        taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
-            }
+        final Set<CustomTaskState> taskStatuses = new HashSet<>();
+        if (task instanceof ClickUpTask clickUpTask) {
+            String spaceId = clickUpTask.getSpace().getId();
+            ClickUpSpace space = fetchSpace(spaceId);
+            LOG.warn("Fetching available task states for task ID: " + task.getId());
+            space.getStatuses().forEach(state ->
+                    taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
+        } else {
+            throw new Exception("Task is not a ClickUp task");
         }
 
         LOG.warn("Available task states: " + taskStatuses.stream()
@@ -328,6 +331,16 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             String responseBody = EntityUtils.toString(response.getEntity());
             Type listType = new TypeToken<GetFolderlessLists>() {}.getType();
             return ((GetFolderlessLists) gson.fromJson(responseBody, listType)).getLists();
+        });
+    }
+
+    private ClickUpSpace fetchSpace(String spaceId) throws IOException {
+        HttpGet httpGet = new HttpGet(API_URL + "/space/" + spaceId);
+        httpGet.addHeader("Authorization", myPassword);
+        return getHttpClient().execute(httpGet, response -> {
+            String responseBody = EntityUtils.toString(response.getEntity());
+            Type listType = new TypeToken<ClickUpSpace>() {}.getType();
+            return gson.fromJson(responseBody, listType);
         });
     }
 
