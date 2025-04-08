@@ -31,15 +31,6 @@ Integrate ClickUp with JetBrains IDEs to manage tasks and track time directly wi
 1. Open the `Tasks` tool window.
 2. Manage ClickUp tasks and log time directly from the IDE.
 
-#### Troubleshooting
-
-- **Plugin Not Showing**: Restart the IDE and ensure the plugin is enabled.
-- **Connection Issues**: Verify your API token and test the connection.
-- **Tasks Not Syncing**: Check your internet connection and ClickUp server status.
-- **Time Tracking Issues**: Ensure you are using IntelliJ IDEA Ultimate.
-
-For unresolved issues, create a ticket on [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues).
-
 #### Development Setup
 
 1. Clone the repository:
@@ -66,6 +57,15 @@ To contribute to the project, please follow these steps:
 4. Push your changes to your forked repository.
 5. Create a pull request to the main repository with a description of your changes.
 6. Wait for review and feedback from the maintainers.
+
+#### Troubleshooting
+
+- **Plugin Not Showing**: Restart the IDE and ensure the plugin is enabled.
+- **Connection Issues**: Verify your API token and test the connection.
+- **Tasks Not Syncing**: Check your internet connection and ClickUp server status.
+- **Time Tracking Issues**: Ensure you are using IntelliJ IDEA Ultimate.
+
+For unresolved issues, create a ticket on [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues).
 
 #### License
 
