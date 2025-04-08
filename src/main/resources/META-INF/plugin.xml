@@ -34,7 +34,10 @@
 
     <change-notes><![CDATA[
     <ul>
-      <li>Improve plugin documentation.</li>
+      <li>
+        Explore the detailed release notes:
+        <a href="https://github.com/jaim3r0jas/clickup-intellij-plugin/releases">ClickUp Integration Plugin Releases</a>
+        </li>
     </ul>
     ]]></change-notes>
 </idea-plugin>
