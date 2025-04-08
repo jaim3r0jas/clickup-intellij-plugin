@@ -36,6 +36,7 @@ public class ClickUpTask extends Task {
     private String date_closed;
     private ClickUpTaskState status;
     private String url;
+    private ClickUpSpaceIdOnly space;
     private ClickUpRepository taskRepository;
 
     @Override
@@ -142,6 +143,14 @@ public class ClickUpTask extends Task {
 
     public void setUrl(String url) {
         this.url = url;
+    }
+
+    public ClickUpSpaceIdOnly getSpace() {
+        return space;
+    }
+
+    public void setSpace(ClickUpSpaceIdOnly space) {
+        this.space = space;
     }
 
     @Override
