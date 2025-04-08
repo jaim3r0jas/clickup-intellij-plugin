@@ -1,85 +1,72 @@
-### IntelliJ IDEA Tasks integration for ClickUp
+### IntelliJ IDEA Tasks Integration for ClickUp
 
 #### Description
 
-Enhance your productivity by integrating ClickUp with JetBrains IDEs. Manage your tasks seamlessly and track time spent
-on each task within your development environment.
+Integrate ClickUp with JetBrains IDEs to manage tasks and track time directly within your development environment.
+
+[Plugin on JetBrains Marketplace](https://plugins.jetbrains.com/plugin/26944-clickup-integration)
 
 #### Features
 
-- Easily update ClickUp tasks status.
-- Automatically create a feature branch.
-- Automatically create a change list.
-- Set up a commit message template.
-- Post time tracking entries directly to the active task or issue.
+- Update ClickUp task status.
+- Automatically create feature branches and change lists.
+- Set commit message templates.
+- Log time entries to tasks.
 
-All of these from the comfort of your IDE.
+#### Installation
 
-For now, the plugin has limited functionality, but it is a work in progress. This plugin is an open source project and
-is not officially supported by ClickUp, so contributions and feedback are equally welcome.
+1. Open your JetBrains IDE.
+2. Go to `File` > `Settings` (or `Preferences` on macOS) > `Plugins`.
+3. Search for `ClickUp Integration` in the `Marketplace` tab and install.
+4. Restart the IDE.
 
-The logo is a registered trademark of ClickUp.
+#### Configuration
 
-#### Setup Instructions
+1. Go to `File` > `Settings` > `Tools` > `Tasks` > `Servers`.
+2. Add a new server, select `ClickUp`, and enter your API token.
+3. Test the connection and save.
 
-##### Installation
+#### Usage
 
-1. Open your JetBrains IDE (IntelliJ IDEA, PyCharm, WebStorm, etc.).
-2. Navigate to `File` > `Settings` (or `Preferences` on macOS).
-3. In the left-hand pane, select `Plugins`.
-4. Click on the `Marketplace` tab.
-5. In the search bar, type `ClickUp Integration`.
-6. Locate the `ClickUp Integration` plugin and click `Install`.
-7. Restart your IDE to activate the plugin.
+1. Open the `Tasks` tool window.
+2. Manage ClickUp tasks and log time directly from the IDE.
 
-##### Configuration
+#### Development Setup
 
-1. After restarting the IDE, go to `File` > `Settings` (or `Preferences` on macOS).
-2. In the left-hand pane, select `Tools` > `Tasks`.
-3. Click on the `Servers` tab.
-4. Click the `+` button to add a new task server.
-5. Select `ClickUp` from the list of available servers.
-6. Enter your ClickUp API token and other required information.
-7. Click `Test` to ensure the connection is successful.
-8. Click `OK` to save the configuration.
-
-##### Using the Plugin
-
-1. Open the `Tasks` tool window from the bottom of the IDE.
-2. You can now create, view, and manage your ClickUp tasks directly from the IDE.
-3. Use the `Time Tracking` feature to log time spent on tasks (available in IntelliJ IDEA Ultimate).
-
-#### Troubleshooting
-
-##### Common Issues
-
-1. **Plugin Not Showing Up After Installation**
-    - Ensure that you have restarted your IDE after installing the plugin.
-    - Verify that the plugin is enabled in `File` > `Settings` (or `Preferences` on macOS) > `Plugins`.
-
-2. **Unable to Connect to ClickUp**
-    - Double-check your ClickUp API token and ensure it is correctly entered.
-    - Test the connection in `File` > `Settings` (or `Preferences` on macOS) > `Tools` > `Tasks` > `Servers`.
-
-3. **Tasks Not Syncing**
-    - Ensure that your internet connection is stable.
-    - Verify that the ClickUp server is not experiencing downtime.
-
-4. **Time Tracking Not Working**
-    - Time tracking is only available in IntelliJ IDEA Ultimate. Ensure you are using the correct version of the IDE.
-    - Check if the Time Tracking bundle is installed and enabled.
-
-##### Getting Help
-
-If you encounter any issues not listed above, please create an issue on
-the [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues) page. Provide detailed information
-about the problem, including steps to reproduce, expected behavior, and any error messages.
-
-#### Setting Up Local Environment
-
-To set up the local development environment for this project, follow these steps:
-
-1. **Clone the Repository**
+1. Clone the repository:
    ```sh
    git clone https://github.com/rojas-safenow/clickup-integration.git
    cd clickup-integration
+    ```
+2. Build the plugin:
+   ```sh
+   ./gradlew buildPlugin
+   ```
+3. Run the plugin in a sandbox IDE:
+   ```sh
+    ./gradlew runIde
+    ```
+   
+#### Submit changes
+
+To contribute to the project, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with a clear message.
+4. Push your changes to your forked repository.
+5. Create a pull request to the main repository with a description of your changes.
+6. Wait for review and feedback from the maintainers.
+
+#### Troubleshooting
+
+- **Plugin Not Showing**: Restart the IDE and ensure the plugin is enabled.
+- **Connection Issues**: Verify your API token and test the connection.
+- **Tasks Not Syncing**: Check your internet connection and ClickUp server status.
+- **Time Tracking Issues**: Ensure you are using IntelliJ IDEA Ultimate.
+
+For unresolved issues, create a ticket on [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues).
+
+#### License
+
+This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
