@@ -132,11 +132,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             int limit, // ClickUp API does not support page size
             boolean withClosed,
             @NotNull ProgressIndicator cancelled) throws Exception {
-        LOG.info("getIssues called with listId: " + selectedListId);
-        LOG.info("getIssues called with offset: " + offset);
-        LOG.info("getIssues called with limit: " + limit);
+        LOG.debug("getIssues called with listId: " + selectedListId);
+        LOG.debug("getIssues called with offset: " + offset);
+        LOG.debug("getIssues called with limit: " + limit);
 
-        String getIssuesUrl = API_URL + "/list/" + selectedListId + "/task?archived=false";
+        String getIssuesUrl = API_URL + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
 
         int clickUpLimit = 100;
         int page = (offset / clickUpLimit) - 1; // first page is 0
