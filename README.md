@@ -46,3 +46,27 @@ For unresolved issues, create a ticket on [GitHub Issues](https://github.com/roj
    ```sh
    git clone https://github.com/rojas-safenow/clickup-integration.git
    cd clickup-integration
+    ```
+2. Build the plugin:
+   ```sh
+   ./gradlew buildPlugin
+   ```
+3. Run the plugin in a sandbox IDE:
+   ```sh
+    ./gradlew runIde
+    ```
+   
+#### Submit changes
+
+To contribute to the project, please follow these steps:
+
+1. Fork the repository.
+2. Create a new branch for your feature or bug fix.
+3. Make your changes and commit them with a clear message.
+4. Push your changes to your forked repository.
+5. Create a pull request to the main repository with a description of your changes.
+6. Wait for review and feedback from the maintainers.
+
+#### License
+
+This project is licensed under the [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0).
