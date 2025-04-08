@@ -196,16 +196,15 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
     @Override
     public @NotNull Set<CustomTaskState> getAvailableTaskStates(@NotNull Task task) throws Exception {
-        final Set<CustomTaskState> taskStatuses = new HashSet<>();
-        if (task instanceof ClickUpTask clickUpTask) {
-            String spaceId = clickUpTask.getSpace().getId();
-            ClickUpSpace space = fetchSpace(spaceId);
-            LOG.warn("Fetching available task states for task ID: " + task.getId());
-            space.getStatuses().forEach(state ->
-                    taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
-        } else {
-            throw new Exception("Task is not a ClickUp task");
-        }
+        Set<CustomTaskState> taskStatuses = new HashSet<>();
+        LOG.warn("Fetching available task states for task ID: " + task.getId());
+
+        ClickUpTask clickUpTask = fetchTask(task.getId());
+        String spaceId = clickUpTask.getSpace().getId();
+        ClickUpSpace space = fetchSpace(spaceId);
+
+        space.getStatuses().forEach(state ->
+                taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
 
         LOG.warn("Available task states: " + taskStatuses.stream()
                 .map(CustomTaskState::getPresentableName)
@@ -331,6 +330,16 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             String responseBody = EntityUtils.toString(response.getEntity());
             Type listType = new TypeToken<GetFolderlessLists>() {}.getType();
             return ((GetFolderlessLists) gson.fromJson(responseBody, listType)).getLists();
+        });
+    }
+
+    private ClickUpTask fetchTask(String taskId) throws IOException {
+        HttpGet httpGet = new HttpGet(API_URL + "/task/" + taskId);
+        httpGet.addHeader("Authorization", myPassword);
+        return getHttpClient().execute(httpGet, response -> {
+            String responseBody = EntityUtils.toString(response.getEntity());
+            Type listType = new TypeToken<ClickUpTask>() {}.getType();
+            return gson.fromJson(responseBody, listType);
         });
     }
 
