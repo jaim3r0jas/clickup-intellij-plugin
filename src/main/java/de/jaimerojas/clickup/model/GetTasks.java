@@ -18,8 +18,6 @@ package de.jaimerojas.clickup.model;
 import java.util.List;
 import java.util.Objects;
 
-// FIXME: API call get tasks is limited to 100 records, add filtering mechanisms to narrow
-//  down results and add support to multipage results
 public class GetTasks {
     private List<ClickUpTask> tasks;
 
