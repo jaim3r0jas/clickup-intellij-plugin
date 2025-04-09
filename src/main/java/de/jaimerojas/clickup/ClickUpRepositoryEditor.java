@@ -48,7 +48,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
             Consumer<? super ClickUpRepository> changeListener
     ) {
         super(project, repository, changeListener);
-        myURLText.setText(repository.getUrl());
+
         myUrlLabel.setVisible(false);
         myURLText.setVisible(false);
         myUsernameLabel.setVisible(false);
@@ -81,10 +81,6 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         JPanel myAssigneePanel = new JPanel(new BorderLayout(5, 5));
         myAssigneePanel.add(myAssigneeDropdown, BorderLayout.CENTER);
 
-        installListener(myApiTokenField);
-        installListener(myWorkspaceDropdown);
-        installListener(myAssigneeDropdown);
-
         if (StringUtil.isNotEmpty(myRepository.getPassword())) {
             loadWorkspaces();
             loadAssignees();
@@ -107,6 +103,10 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
             }
         });
         myWorkspaceDropdown.addActionListener(e -> loadAssignees());
+
+        installListener(myApiTokenField);
+        installListener(myWorkspaceDropdown);
+        installListener(myAssigneeDropdown);
 
         // Use FormBuilder to create the panel
         return FormBuilder.createFormBuilder()
@@ -143,10 +143,10 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
             myWorkspaceDropdown.removeAllItems();
             myWorkspaceDropdown.addItem(new ClickUpWorkspace("-1", "<Workspace>"));
             if (StringUtil.isEmpty(myRepository.getPassword())) return;
-            for (ClickUpWorkspace clickUpWorkspace : myRepository.fetchWorkspaces()) {
-                myWorkspaceDropdown.addItem(clickUpWorkspace);
-                if (clickUpWorkspace.getId().equals(myRepository.getSelectedWorkspaceId()))
-                    myWorkspaceDropdown.setSelectedItem(clickUpWorkspace);
+            for (ClickUpWorkspace workspace : myRepository.fetchWorkspaces()) {
+                myWorkspaceDropdown.addItem(workspace);
+                if (workspace.getId().equals(myRepository.getSelectedWorkspaceId()))
+                    myWorkspaceDropdown.setSelectedItem(workspace);
             }
         } catch (IOException e) {
             LOG.error("Failed to fetch ClickUp data", e);

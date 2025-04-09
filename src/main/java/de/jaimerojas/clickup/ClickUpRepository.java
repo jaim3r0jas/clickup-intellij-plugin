@@ -47,7 +47,6 @@ import java.util.concurrent.TimeUnit;
 @Tag("ClickUp")
 public class ClickUpRepository extends NewBaseRepositoryImpl {
     private static final Logger LOG = Logger.getInstance(ClickUpRepository.class);
-    private static final String CLICKUP_API_V2_URL = "https://api.clickup.com/api/v2";
     private static final Gson gson = new Gson();
 
     private String selectedWorkspaceId;
@@ -70,6 +69,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         setPassword(other.getPassword());
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
         setSelectedAssigneeId(other.getSelectedAssigneeId());
+    }
+
+    @Override
+    public String getUrl() {
+        return "https://api.clickup.com/api/v2";
     }
 
     @Override
@@ -97,7 +101,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Nullable
     @Override
     public Task findTask(@NotNull String taskId) {
-        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/task/" + taskId);
+        HttpGet httpGet = new HttpGet(getUrl() + "/task/" + taskId);
         httpGet.addHeader("Authorization", myPassword);
         try {
             return getHttpClient().execute(httpGet, response -> {
@@ -128,7 +132,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         LOG.debug("getIssues called with offset: " + offset);
         LOG.debug("getIssues called with limit: " + limit);
 
-        String getIssuesUrl = CLICKUP_API_V2_URL + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
+        String getIssuesUrl = getUrl() + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
 
         int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
         int page = offset / clickUpLimit;
@@ -222,7 +226,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
             @Override
             protected void doTest() throws Exception {
-                HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/team");
+                HttpGet httpGet = new HttpGet(getUrl() + "/team");
                 httpGet.addHeader("Authorization", myPassword);
                 getHttpClient().execute(httpGet);
             }
@@ -248,7 +252,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull HttpPost trackTimeSpend(@NotNull String timeSpent, /* not supported via ClickUp API v2 */ @NotNull String ignore, String taskId) throws UnsupportedEncodingException {
-        String url = CLICKUP_API_V2_URL + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        String url = getUrl() + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("Authorization", myPassword);
@@ -264,7 +268,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull HttpPut updateTaskState(@NotNull CustomTaskState state, String taskId) throws UnsupportedEncodingException {
-        String url = CLICKUP_API_V2_URL + "/task/" + taskId + "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        String url = getUrl() + "/task/" + taskId + "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
         HttpPut httpPut = new HttpPut(url);
         httpPut.addHeader("Authorization", myPassword);
@@ -279,7 +283,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     public List<ClickUpWorkspace> fetchWorkspaces() throws IOException {
-        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/team");
+        HttpGet httpGet = new HttpGet(getUrl() + "/team");
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
@@ -290,7 +294,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private ClickUpTask fetchTask(String taskId) throws IOException {
-        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/task/" + taskId);
+        HttpGet httpGet = new HttpGet(getUrl() + "/task/" + taskId);
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
@@ -301,7 +305,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private ClickUpSpace fetchSpace(String spaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/space/" + spaceId);
+        HttpGet httpGet = new HttpGet(getUrl() + "/space/" + spaceId);
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
