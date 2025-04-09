@@ -47,14 +47,10 @@ import java.util.concurrent.TimeUnit;
 @Tag("ClickUp")
 public class ClickUpRepository extends NewBaseRepositoryImpl {
     private static final Logger LOG = Logger.getInstance(ClickUpRepository.class);
-
-    public static final String API_URL = "https://api.clickup.com/api/v2";
-
+    private static final String CLICKUP_API_V2_URL = "https://api.clickup.com/api/v2";
     private static final Gson gson = new Gson();
 
     private String selectedWorkspaceId;
-    private String selectedSpaceId;
-    private String selectedListId;
     private String selectedAssigneeId;
 
     /**
@@ -73,8 +69,6 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         super(other);
         setPassword(other.getPassword());
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
-        setSelectedSpaceId(other.getSelectedSpaceId());
-        setSelectedListId(other.getSelectedListId());
         setSelectedAssigneeId(other.getSelectedAssigneeId());
     }
 
@@ -84,16 +78,12 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         if (!super.equals(o)) return false;
 
         return Objects.equals(selectedWorkspaceId, that.selectedWorkspaceId)
-                && Objects.equals(selectedSpaceId, that.selectedSpaceId)
-                && Objects.equals(selectedListId, that.selectedListId)
                 && Objects.equals(selectedAssigneeId, that.selectedAssigneeId);
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hashCode(selectedWorkspaceId);
-        result = 31 * result + Objects.hashCode(selectedSpaceId);
-        result = 31 * result + Objects.hashCode(selectedListId);
         result = 31 * result + Objects.hashCode(selectedAssigneeId);
         return result;
     }
@@ -107,7 +97,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Nullable
     @Override
     public Task findTask(@NotNull String taskId) {
-        HttpGet httpGet = new HttpGet(API_URL + "/task/" + taskId);
+        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/task/" + taskId);
         httpGet.addHeader("Authorization", myPassword);
         try {
             return getHttpClient().execute(httpGet, response -> {
@@ -121,7 +111,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     @Override
-    public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed) throws Exception {
+    public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed) {
         return getIssues(query, offset, limit, withClosed, new EmptyProgressIndicator());
     }
 
@@ -129,17 +119,19 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     public Task[] getIssues(
             @Nullable String query,
             int offset,
-            int limit, // ClickUp API does not support page size
+            int limit,
             boolean withClosed,
-            @NotNull ProgressIndicator cancelled) throws Exception {
-        LOG.debug("getIssues called with listId: " + selectedListId);
+            @NotNull ProgressIndicator cancelled) {
+        if (myPassword == null || myPassword.trim().isEmpty())
+            return new Task[0];
+
         LOG.debug("getIssues called with offset: " + offset);
         LOG.debug("getIssues called with limit: " + limit);
 
-        String getIssuesUrl = API_URL + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
+        String getIssuesUrl = CLICKUP_API_V2_URL + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
 
-        int clickUpLimit = 100;
-        int page = (offset / clickUpLimit) - 1; // first page is 0
+        int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
+        int page = offset / clickUpLimit;
         if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
             getIssuesUrl += "&page=" + page + "&assignees[]=" + selectedAssigneeId;
         }
@@ -149,7 +141,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         try {
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
-                Type listType = new TypeToken<GetTasks>() {}.getType();
+                Type listType = new TypeToken<GetTasks>() {
+                }.getType();
                 final ClickUpTask[] tasks = ((GetTasks) gson.fromJson(responseBody, listType)).getTasks().toArray(new ClickUpTask[0]);
                 // set repo to each task - necessary to enable status update on open task dialog
                 Arrays.stream(tasks).forEach(task -> task.setRepository(this));
@@ -229,7 +222,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
             @Override
             protected void doTest() throws Exception {
-                HttpGet httpGet = new HttpGet(API_URL + "/team");
+                HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/team");
                 httpGet.addHeader("Authorization", myPassword);
                 getHttpClient().execute(httpGet);
             }
@@ -245,24 +238,6 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         this.selectedWorkspaceId = selectedWorkspaceId;
     }
 
-    @Attribute("SelectedSpaceId")
-    public String getSelectedSpaceId() {
-        return selectedSpaceId;
-    }
-
-    public void setSelectedSpaceId(String selectedSpaceId) {
-        this.selectedSpaceId = selectedSpaceId;
-    }
-
-    @Attribute("SelectedListId")
-    public String getSelectedListId() {
-        return selectedListId;
-    }
-
-    public void setSelectedListId(String selectedListId) {
-        this.selectedListId = selectedListId;
-    }
-
     @Attribute("SelectedAssigneeId")
     public String getSelectedAssigneeId() {
         return selectedAssigneeId;
@@ -273,7 +248,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull HttpPost trackTimeSpend(@NotNull String timeSpent, /* not supported via ClickUp API v2 */ @NotNull String ignore, String taskId) throws UnsupportedEncodingException {
-        String url = API_URL + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        String url = CLICKUP_API_V2_URL + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
         HttpPost httpPost = new HttpPost(url);
         httpPost.addHeader("Authorization", myPassword);
@@ -289,7 +264,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull HttpPut updateTaskState(@NotNull CustomTaskState state, String taskId) throws UnsupportedEncodingException {
-        String url = API_URL + "/task/" + taskId + "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        String url = CLICKUP_API_V2_URL + "/task/" + taskId + "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
         HttpPut httpPut = new HttpPut(url);
         httpPut.addHeader("Authorization", myPassword);
@@ -304,64 +279,35 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     public List<ClickUpWorkspace> fetchWorkspaces() throws IOException {
-        HttpGet httpGet = new HttpGet(API_URL + "/team");
+        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/team");
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {}.getType();
+            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {
+            }.getType();
             return ((GetAuthorizedWorkspaces) gson.fromJson(responseBody, listType)).getTeams();
         });
     }
 
-    public List<ClickUpSpace> fetchSpaces(String workspaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(API_URL + "/team/" + workspaceId + "/space?archived=false");
-        httpGet.addHeader("Authorization", myPassword);
-        return getHttpClient().execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetSpaces>() {}.getType();
-            return ((GetSpaces) gson.fromJson(responseBody, listType)).getSpaces();
-        });
-    }
-
-    public List<ClickUpList> fetchLists(String spaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(API_URL + "/space/" + spaceId + "/list?archived=false");
-        httpGet.addHeader("Authorization", myPassword);
-        return getHttpClient().execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetFolderlessLists>() {}.getType();
-            return ((GetFolderlessLists) gson.fromJson(responseBody, listType)).getLists();
-        });
-    }
-
     private ClickUpTask fetchTask(String taskId) throws IOException {
-        HttpGet httpGet = new HttpGet(API_URL + "/task/" + taskId);
+        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/task/" + taskId);
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<ClickUpTask>() {}.getType();
+            Type listType = new TypeToken<ClickUpTask>() {
+            }.getType();
             return gson.fromJson(responseBody, listType);
         });
     }
 
     private ClickUpSpace fetchSpace(String spaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(API_URL + "/space/" + spaceId);
+        HttpGet httpGet = new HttpGet(CLICKUP_API_V2_URL + "/space/" + spaceId);
         httpGet.addHeader("Authorization", myPassword);
         return getHttpClient().execute(httpGet, response -> {
             String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<ClickUpSpace>() {}.getType();
+            Type listType = new TypeToken<ClickUpSpace>() {
+            }.getType();
             return gson.fromJson(responseBody, listType);
         });
     }
-
-    public void clearSelectedWorkspace() {
-        setSelectedWorkspaceId(null);
-        setSelectedSpaceId(null);
-        setSelectedListId(null);
-    }
-
-    public void clearSelectedSpace() {
-        setSelectedSpaceId(null);
-        setSelectedListId(null);
-    }
-
 }
