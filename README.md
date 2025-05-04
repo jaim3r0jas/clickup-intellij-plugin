@@ -1,3 +1,5 @@
+[![Build](https://github.com/jaim3r0jas/clickup-intellij-plugin/actions/workflows/build.yaml/badge.svg)](https://github.com/jaim3r0jas/clickup-intellij-plugin/actions/workflows/build.yaml)
+
 ### IntelliJ IDEA Tasks Integration for ClickUp
 
 #### Description
