@@ -105,11 +105,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Nullable
     @Override
     public Task findTask(@NotNull String taskId) {
-        String uri = getUrl() + "/task/" + taskId;
+        StringBuilder uri = new StringBuilder(getUrl()).append("/task/").append(taskId);
         if (useCustomTaskIds) {
-            uri += "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+            uri.append("?custom_task_ids=true&team_id=").append(selectedWorkspaceId);
         }
-        HttpGet httpGet = new HttpGet(uri);
+        HttpGet httpGet = new HttpGet(uri.toString());
         httpGet.addHeader("Authorization", myPassword);
         try {
             // fixme: NewBaseRepositoryImplgetHttpClient() hast protected access
@@ -160,17 +160,18 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull String buildGetIssuesUrl(int offset) {
-        String getIssuesUrl = getUrl() + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
+        StringBuilder getIssuesUrl = new StringBuilder();
+        getIssuesUrl.append(getUrl()).append("/team/").append(selectedWorkspaceId).append("/task?subtasks=true&archived=false");
 
         int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
         int page = offset / clickUpLimit;
         if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
-            getIssuesUrl += "&page=" + page + "&assignees[]=" + selectedAssigneeId;
+            getIssuesUrl.append("&page=").append(page).append("&assignees[]=").append(selectedAssigneeId);
         }
         if (useCustomTaskIds) {
-            getIssuesUrl += "&custom_task_ids=true";
+            getIssuesUrl.append("&custom_task_ids=true");
         }
-        return getIssuesUrl;
+        return getIssuesUrl.toString();
     }
 
     @Override
