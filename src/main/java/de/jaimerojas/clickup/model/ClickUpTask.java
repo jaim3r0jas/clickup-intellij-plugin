@@ -51,7 +51,8 @@ public class ClickUpTask extends Task {
 
     @Override
     public @NotNull Icon getIcon() {
-        return new ImageIcon(new byte[]{});
+        // use logo-v3-clickup-symbol-only.svg form resources folder
+        return new ImageIcon(ClickUpTaskIconHolder.clickUpIcon);
     }
 
     @Override

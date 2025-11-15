@@ -41,6 +41,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
     private JBPasswordField myApiTokenField;
     private ComboBox<ClickUpWorkspace> myWorkspaceDropdown;
     private ComboBox<ClickUpUser> myAssigneeDropdown;
+    private JCheckBox myUseCustomTaskIdsCheckBox;
 
     public ClickUpRepositoryEditor(
             Project project,
@@ -81,9 +82,13 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         JPanel myAssigneePanel = new JPanel(new BorderLayout(5, 5));
         myAssigneePanel.add(myAssigneeDropdown, BorderLayout.CENTER);
 
+        myUseCustomTaskIdsCheckBox = new JCheckBox(ClickUpBundle.message("label.use.custom.task.ids"));
+        myAssigneePanel.add(myUseCustomTaskIdsCheckBox, BorderLayout.EAST);
+
         if (StringUtil.isNotEmpty(myRepository.getPassword())) {
             loadWorkspaces();
             loadAssignees();
+            loadUseCustomTaskIds();
         }
 
         myApiTokenField.addFocusListener(new FocusAdapter() {
@@ -100,6 +105,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
                 }
                 loadWorkspaces();
                 loadAssignees();
+                loadUseCustomTaskIds();
             }
         });
         myWorkspaceDropdown.addActionListener(e -> loadAssignees());
@@ -107,11 +113,12 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         installListener(myApiTokenField);
         installListener(myWorkspaceDropdown);
         installListener(myAssigneeDropdown);
+        installListener(myUseCustomTaskIdsCheckBox);
 
         // Use FormBuilder to create the panel
         return FormBuilder.createFormBuilder()
                 .setAlignLabelOnRight(true)
-                .addLabeledComponent(new JBLabel(TaskBundle.message("label.api.token"), SwingConstants.RIGHT), myApiTokenPanel)
+                .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.api.token"), SwingConstants.RIGHT), myApiTokenPanel)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.workspace"), SwingConstants.RIGHT), myWorkspacePanel)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.assignedTo"), SwingConstants.RIGHT), myAssigneePanel)
                 .getPanel();
@@ -135,6 +142,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
                 LOG.info("Selected assignee: " + user.getId());
                 myRepository.setSelectedAssigneeId(user.getId());
             }
+            myRepository.setUseCustomTaskIds(myUseCustomTaskIdsCheckBox.isSelected());
         }
     }
 
@@ -179,5 +187,9 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
             if (member.getUser().getId().equals(myRepository.getSelectedAssigneeId()))
                 myAssigneeDropdown.setSelectedItem(member.getUser());
         }
+    }
+
+    private void loadUseCustomTaskIds() {
+        myUseCustomTaskIdsCheckBox.setSelected(myRepository.isUseCustomTaskIds());
     }
 }
