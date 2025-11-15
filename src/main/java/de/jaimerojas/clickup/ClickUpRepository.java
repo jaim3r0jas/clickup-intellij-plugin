@@ -51,6 +51,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
     private String selectedWorkspaceId;
     private String selectedAssigneeId;
+    private boolean useCustomTaskIds = false;
 
     /**
      * Serialization constructor
@@ -69,6 +70,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         setPassword(other.getPassword());
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
         setSelectedAssigneeId(other.getSelectedAssigneeId());
+        setUseCustomTaskIds(other.isUseCustomTaskIds());
     }
 
     @Override
@@ -82,13 +84,15 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         if (!super.equals(o)) return false;
 
         return Objects.equals(selectedWorkspaceId, that.selectedWorkspaceId)
-                && Objects.equals(selectedAssigneeId, that.selectedAssigneeId);
+                && Objects.equals(selectedAssigneeId, that.selectedAssigneeId)
+                && useCustomTaskIds == that.useCustomTaskIds;
     }
 
     @Override
     public int hashCode() {
         int result = Objects.hashCode(selectedWorkspaceId);
         result = 31 * result + Objects.hashCode(selectedAssigneeId);
+        result = 31 * result + Boolean.hashCode(useCustomTaskIds);
         return result;
     }
 
@@ -101,9 +105,14 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Nullable
     @Override
     public Task findTask(@NotNull String taskId) {
-        HttpGet httpGet = new HttpGet(getUrl() + "/task/" + taskId);
+        String uri = getUrl() + "/task/" + taskId;
+        if (useCustomTaskIds) {
+            uri += "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        }
+        HttpGet httpGet = new HttpGet(uri);
         httpGet.addHeader("Authorization", myPassword);
         try {
+            // fixme: NewBaseRepositoryImplgetHttpClient() hast protected access
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
                 return gson.fromJson(responseBody, Task.class);
@@ -132,16 +141,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         LOG.debug("getIssues called with offset: " + offset);
         LOG.debug("getIssues called with limit: " + limit);
 
-        String getIssuesUrl = getUrl() + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
-
-        int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
-        int page = offset / clickUpLimit;
-        if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
-            getIssuesUrl += "&page=" + page + "&assignees[]=" + selectedAssigneeId;
-        }
-        HttpGet httpGet = new HttpGet(getIssuesUrl);
+        HttpGet httpGet = new HttpGet(buildGetIssuesUrl(offset));
         httpGet.addHeader("Authorization", myPassword);
-
         try {
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
@@ -156,6 +157,20 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             LOG.error("Error fetching tasks with query: " + query, e);
         }
         return new Task[0];
+    }
+
+    private @NotNull String buildGetIssuesUrl(int offset) {
+        String getIssuesUrl = getUrl() + "/team/" + selectedWorkspaceId + "/task?subtasks=true&archived=false";
+
+        int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
+        int page = offset / clickUpLimit;
+        if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
+            getIssuesUrl += "&page=" + page + "&assignees[]=" + selectedAssigneeId;
+        }
+        if (useCustomTaskIds) {
+            getIssuesUrl += "&custom_task_ids=true";
+        }
+        return getIssuesUrl;
     }
 
     @Override
@@ -251,6 +266,19 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         this.selectedAssigneeId = selectedAssigneeId;
     }
 
+    @Attribute("UseCustomTaskIds")
+    public boolean isUseCustomTaskIds() {
+        return this.useCustomTaskIds;
+    }
+
+    public void setUseCustomTaskIds(boolean selected) {
+        this.useCustomTaskIds = selected;
+    }
+
+    public void getHttpClientForTest() {
+        getHttpClient();
+    }
+
     private @NotNull HttpPost trackTimeSpend(@NotNull String timeSpent, /* not supported via ClickUp API v2 */ @NotNull String ignore, String taskId) throws UnsupportedEncodingException {
         String url = getUrl() + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
 
@@ -268,9 +296,12 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     }
 
     private @NotNull HttpPut updateTaskState(@NotNull CustomTaskState state, String taskId) throws UnsupportedEncodingException {
-        String url = getUrl() + "/task/" + taskId + "?custom_task_ids=true&team_id=" + selectedWorkspaceId;
+        StringBuilder urlBuilder = new StringBuilder(getUrl()).append("/task/").append(taskId).append("?team_id=").append(selectedWorkspaceId);
+        if (useCustomTaskIds) {
+            urlBuilder.append("&custom_task_ids=true");
+        }
 
-        HttpPut httpPut = new HttpPut(url);
+        HttpPut httpPut = new HttpPut(urlBuilder.toString());
         httpPut.addHeader("Authorization", myPassword);
         httpPut.addHeader("Content-Type", "application/json");
 
