@@ -51,13 +51,12 @@ public class ClickUpTask extends Task {
 
     @Override
     public @NotNull Icon getIcon() {
-        // use logo-v3-clickup-symbol-only.svg form resources folder
         return new ImageIcon(ClickUpTaskIconHolder.clickUpIcon);
     }
 
     @Override
     public @NotNull TaskType getType() {
-        return TaskType.BUG;// clickup does not provide task type in the API (GET /task)
+        return TaskType.FEATURE;// clickup does not provide task type in the API (GET /task)
     }
 
     @Override
