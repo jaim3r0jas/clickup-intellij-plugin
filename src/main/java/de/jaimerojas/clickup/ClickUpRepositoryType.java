@@ -15,18 +15,16 @@
  */
 package de.jaimerojas.clickup;
 
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.tasks.impl.BaseRepositoryType;
 import com.intellij.util.Consumer;
+import de.jaimerojas.clickup.model.ClickUpTaskIconHolder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
-import java.util.Objects;
 
 public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository> {
-    private static final Logger LOG = Logger.getInstance(ClickUpRepositoryType.class);
-    private static final Icon icon = new ImageIcon(Objects.requireNonNull(ClickUpRepositoryType.class.getClassLoader().getResource("icons/clickup.png")));
+    private static final Icon icon = new ImageIcon(ClickUpTaskIconHolder.clickUpIcon);
 
     @Override
     @NotNull
