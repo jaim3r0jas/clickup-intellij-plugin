@@ -115,7 +115,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             // fixme: NewBaseRepositoryImplgetHttpClient() hast protected access
             return getHttpClient().execute(httpGet, response -> {
                 String responseBody = EntityUtils.toString(response.getEntity());
-                return gson.fromJson(responseBody, Task.class);
+                ClickUpTask task = gson.fromJson(responseBody, ClickUpTask.class);
+                if (task != null) {
+                    task.setRepository(this);
+                }
+                return task;
             });
         } catch (IOException e) {
             LOG.error("Error fetching task with ID: " + taskId, e);
@@ -332,7 +336,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             String responseBody = EntityUtils.toString(response.getEntity());
             Type listType = new TypeToken<ClickUpTask>() {
             }.getType();
-            return gson.fromJson(responseBody, listType);
+            ClickUpTask task = gson.fromJson(responseBody, listType);
+            if (task != null) {
+                task.setRepository(this);
+            }
+            return task;
         });
     }
 

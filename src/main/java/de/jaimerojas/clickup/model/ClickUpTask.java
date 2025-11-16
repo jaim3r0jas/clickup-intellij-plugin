@@ -15,6 +15,7 @@
  */
 package de.jaimerojas.clickup.model;
 
+import com.intellij.openapi.util.NlsSafe;
 import com.intellij.tasks.Comment;
 import com.intellij.tasks.Task;
 import com.intellij.tasks.TaskRepository;
@@ -29,6 +30,7 @@ import java.util.Date;
 
 public class ClickUpTask extends Task {
     private String id;
+    private String custom_id;
     private String name;
     private String description;
     private String date_updated;
@@ -74,8 +76,28 @@ public class ClickUpTask extends Task {
         return id;
     }
 
+    @Override
+    public @NlsSafe @NotNull String getPresentableId() {
+        // If the task is associated with a ClickUpRepository and that repository is configured
+        // to use custom task ids, prefer custom_id when present. Otherwise fall back to id.
+        if (taskRepository != null && taskRepository.isUseCustomTaskIds()) {
+            if (custom_id != null && !custom_id.isEmpty()) {
+                return custom_id;
+            }
+        }
+        return id != null ? id : "";
+    }
+
     public void setId(String id) {
         this.id = id;
+    }
+
+    public String getCustom_id() {
+        return custom_id;
+    }
+
+    public void setCustom_id(String custom_id) {
+        this.custom_id = custom_id;
     }
 
     public String getName() {
