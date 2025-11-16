@@ -31,10 +31,43 @@ tasks {
     }
 
     jacocoTestReport {
+        dependsOn(test)
         reports {
             xml.required = true
-            csv.required = false
+            csv.required = true
             html.required = true
+        }
+        classDirectories.setFrom(
+            files(classDirectories.files.map {
+                fileTree(it) {
+                    exclude(
+                        "**/ClickUpBundle.class",
+                        "**/ClickUpTaskIconHolder.class"
+                    )
+                }
+            })
+        )
+    }
+
+    jacocoTestCoverageVerification {
+        dependsOn(jacocoTestReport)
+        violationRules {
+            rule {
+                limit {
+                    minimum = "0.40".toBigDecimal()
+                }
+            }
+            rule {
+                enabled = true
+                element = "CLASS"
+                limit {
+                    minimum = "0.30".toBigDecimal()
+                }
+                excludes = listOf(
+                    "de.jaimerojas.clickup.ClickUpBundle",
+                    "de.jaimerojas.clickup.model.ClickUpTaskIconHolder"
+                )
+            }
         }
     }
 
