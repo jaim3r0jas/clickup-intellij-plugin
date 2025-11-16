@@ -28,6 +28,8 @@ import org.jetbrains.annotations.Nullable;
 import javax.swing.*;
 import java.util.Date;
 
+import static de.jaimerojas.clickup.model.ClickUpTaskIconHolder.CLICKUP_ICON;
+
 public class ClickUpTask extends Task {
     private String id;
     private String custom_id;
@@ -53,7 +55,7 @@ public class ClickUpTask extends Task {
 
     @Override
     public @NotNull Icon getIcon() {
-        return new ImageIcon(ClickUpTaskIconHolder.clickUpIcon);
+        return CLICKUP_ICON;
     }
 
     @Override
