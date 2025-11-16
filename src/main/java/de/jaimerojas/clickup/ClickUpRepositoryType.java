@@ -18,14 +18,13 @@ package de.jaimerojas.clickup;
 import com.intellij.openapi.project.Project;
 import com.intellij.tasks.impl.BaseRepositoryType;
 import com.intellij.util.Consumer;
-import de.jaimerojas.clickup.model.ClickUpTaskIconHolder;
 import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 
-public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository> {
-    private static final Icon icon = new ImageIcon(ClickUpTaskIconHolder.clickUpIcon);
+import static de.jaimerojas.clickup.model.ClickUpTaskIconHolder.CLICKUP_ICON;
 
+public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository> {
     @Override
     @NotNull
     public String getName() {
@@ -35,7 +34,7 @@ public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository>
     @Override
     @NotNull
     public Icon getIcon() {
-        return icon;
+        return CLICKUP_ICON;
     }
 
     @Override

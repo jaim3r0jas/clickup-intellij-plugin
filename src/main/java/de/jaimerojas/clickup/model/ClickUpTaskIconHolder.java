@@ -4,18 +4,16 @@ import com.intellij.ui.scale.ScaleContext;
 import com.intellij.util.ImageLoader;
 import com.intellij.util.ui.ImageUtil;
 
-import java.awt.image.BufferedImage;
+import javax.swing.*;
 import java.util.Objects;
 
 public class ClickUpTaskIconHolder {
     private static final int ICON_SIZE = 7;
+    private static final String CLICKUP_ICON_PATH = "/icons/logo-v3-clickup-symbol-only.svg";
 
-    public static final BufferedImage clickUpIcon =
-            ImageUtil.toBufferedImage(
-                    ImageUtil.resize(
-                            Objects.requireNonNull(ImageLoader.loadFromResource("/icons/logo-v3-clickup-symbol-only.svg", ClickUpTaskIconHolder.class)),
-                            ICON_SIZE,
-                            ScaleContext.createIdentity()
-                    )
-            );
+    public static final ImageIcon CLICKUP_ICON = new ImageIcon(ImageUtil.toBufferedImage(ImageUtil.resize(
+            Objects.requireNonNull(
+                    ImageLoader.loadFromResource(CLICKUP_ICON_PATH, ClickUpTaskIconHolder.class)
+            ), ICON_SIZE, ScaleContext.createIdentity()
+    )));
 }
