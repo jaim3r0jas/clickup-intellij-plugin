@@ -1,4 +1,5 @@
 [![Build](https://github.com/jaim3r0jas/clickup-intellij-plugin/actions/workflows/build.yaml/badge.svg)](https://github.com/jaim3r0jas/clickup-intellij-plugin/actions/workflows/build.yaml)
+[![codecov](https://codecov.io/gh/jaim3r0jas/clickup-intellij-plugin/graph/badge.svg?token=43VL7NXZTL)](https://codecov.io/gh/jaim3r0jas/clickup-intellij-plugin)
 
 ### IntelliJ IDEA Tasks Integration for ClickUp
 
