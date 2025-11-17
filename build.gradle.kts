@@ -21,6 +21,8 @@ dependencies {
         bundledPlugin("com.intellij.tasks")
     }
     testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation("org.mockito:mockito-core:5.7.0")
+    testImplementation("org.mockito:mockito-junit-jupiter:5.7.0")
 }
 
 tasks {

@@ -15,12 +15,7 @@
  */
 package de.jaimerojas.clickup;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
-import com.intellij.openapi.progress.ProgressIndicator;
 import com.intellij.tasks.CustomTaskState;
 import com.intellij.tasks.LocalTask;
 import com.intellij.tasks.Task;
@@ -29,29 +24,31 @@ import com.intellij.tasks.impl.BaseRepository;
 import com.intellij.tasks.impl.httpclient.NewBaseRepositoryImpl;
 import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
-import de.jaimerojas.clickup.model.*;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.client.methods.HttpPut;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.util.EntityUtils;
+import de.jaimerojas.clickup.api.ClickUpApiClient;
+import de.jaimerojas.clickup.api.ClickUpApiClientImpl;
+import de.jaimerojas.clickup.model.ClickUpSpace;
+import de.jaimerojas.clickup.model.ClickUpTask;
+import de.jaimerojas.clickup.model.ClickUpWorkspace;
+import de.jaimerojas.clickup.service.ClickUpTaskService;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.lang.reflect.Type;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 
 @Tag("ClickUp")
 public class ClickUpRepository extends NewBaseRepositoryImpl {
     private static final Logger LOG = Logger.getInstance(ClickUpRepository.class);
-    private static final Gson gson = new Gson();
 
     private String selectedWorkspaceId;
     private String selectedAssigneeId;
     private boolean useCustomTaskIds = false;
+
+    // Service layer for business logic - can be injected for testing
+    private ClickUpTaskService taskService;
 
     /**
      * Serialization constructor
@@ -71,6 +68,35 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
         setSelectedAssigneeId(other.getSelectedAssigneeId());
         setUseCustomTaskIds(other.isUseCustomTaskIds());
+        this.taskService = other.taskService;
+    }
+
+    /**
+     * Constructor for testing - allows injection of custom service
+     */
+    public ClickUpRepository(TaskRepositoryType type, ClickUpTaskService taskService) {
+        super(type);
+        this.taskService = taskService;
+    }
+
+    /**
+     * Gets or creates the task service.
+     * Lazily initializes the service with the API client.
+     */
+    @NotNull
+    protected ClickUpTaskService getTaskService() {
+        if (taskService == null) {
+            ClickUpApiClient apiClient = new ClickUpApiClientImpl(getHttpClient(), myPassword);
+            taskService = new ClickUpTaskService(apiClient);
+        }
+        return taskService;
+    }
+
+    /**
+     * For testing - allows setting a custom task service
+     */
+    void setTaskService(ClickUpTaskService taskService) {
+        this.taskService = taskService;
     }
 
     @Override
@@ -105,22 +131,12 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Nullable
     @Override
     public Task findTask(@NotNull String taskId) {
-        StringBuilder uri = new StringBuilder(getUrl()).append("/task/").append(taskId);
-        if (useCustomTaskIds) {
-            uri.append("?custom_task_ids=true&team_id=").append(selectedWorkspaceId);
-        }
-        HttpGet httpGet = new HttpGet(uri.toString());
-        httpGet.addHeader("Authorization", myPassword);
         try {
-            // fixme: NewBaseRepositoryImplgetHttpClient() hast protected access
-            return getHttpClient().execute(httpGet, response -> {
-                String responseBody = EntityUtils.toString(response.getEntity());
-                ClickUpTask task = gson.fromJson(responseBody, ClickUpTask.class);
-                if (task != null) {
-                    task.setRepository(this);
-                }
-                return task;
-            });
+            ClickUpTask task = getTaskService().getTask(taskId, useCustomTaskIds, selectedWorkspaceId);
+            if (task != null) {
+                task.setRepository(this);
+            }
+            return task;
         } catch (IOException e) {
             LOG.error("Error fetching task with ID: " + taskId, e);
         }
@@ -129,70 +145,37 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
     @Override
     public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed) {
-        return getIssues(query, offset, limit, withClosed, new EmptyProgressIndicator());
-    }
-
-    @Override
-    public Task[] getIssues(
-            @Nullable String query,
-            int offset,
-            int limit,
-            boolean withClosed,
-            @NotNull ProgressIndicator cancelled) {
         if (myPassword == null || myPassword.trim().isEmpty())
             return new Task[0];
 
         LOG.debug("getIssues called with offset: " + offset);
         LOG.debug("getIssues called with limit: " + limit);
 
-        HttpGet httpGet = new HttpGet(buildGetIssuesUrl(offset));
-        httpGet.addHeader("Authorization", myPassword);
         try {
-            return getHttpClient().execute(httpGet, response -> {
-                String responseBody = EntityUtils.toString(response.getEntity());
-                Type listType = new TypeToken<GetTasks>() {
-                }.getType();
-                final ClickUpTask[] tasks = ((GetTasks) gson.fromJson(responseBody, listType)).getTasks().toArray(new ClickUpTask[0]);
-                // set repo to each task - necessary to enable status update on open task dialog
-                Arrays.stream(tasks).forEach(task -> task.setRepository(this));
-                return tasks;
-            });
+            List<ClickUpTask> tasks = getTaskService().getTasks(
+                    selectedWorkspaceId,
+                    selectedAssigneeId,
+                    offset,
+                    useCustomTaskIds
+            );
+
+            // set repo to each task - necessary to enable status update on open task dialog
+            tasks.forEach(task -> task.setRepository(this));
+            return tasks.toArray(new ClickUpTask[0]);
         } catch (IOException e) {
             LOG.error("Error fetching tasks with query: " + query, e);
         }
         return new Task[0];
     }
 
-    private @NotNull String buildGetIssuesUrl(int offset) {
-        StringBuilder getIssuesUrl = new StringBuilder();
-        getIssuesUrl.append(getUrl()).append("/team/").append(selectedWorkspaceId).append("/task?subtasks=true&archived=false");
-
-        int clickUpLimit = 100;// Fixed because ClickUp API always uses 100
-        int page = offset / clickUpLimit;
-        if (selectedAssigneeId != null && !selectedAssigneeId.isEmpty()) {
-            getIssuesUrl.append("&page=").append(page).append("&assignees[]=").append(selectedAssigneeId);
-        }
-        if (useCustomTaskIds) {
-            getIssuesUrl.append("&custom_task_ids=true");
-        }
-        return getIssuesUrl.toString();
-    }
 
     @Override
     public void updateTimeSpent(@NotNull LocalTask task, @NotNull String timeSpent, @NotNull String comment) throws Exception {
         String taskId = task.getId();
         LOG.warn("Updating time spent for task ID: " + taskId);
         try {
-            // convert time tracking format (3h 15m) to duration in millis 11700000
-            String timeSpentInMillis = String.valueOf(
-                    TimeUnit.HOURS.toMillis(Long.parseLong(timeSpent.split("h")[0])) +
-                            TimeUnit.MINUTES.toMillis(Long.parseLong(timeSpent.split("h")[1].split("m")[0].trim()))
-            );
-
-            getHttpClient().execute(trackTimeSpend(timeSpentInMillis, comment, taskId), response -> {
-                LOG.warn("Time spent updated for task ID: " + taskId + " with " + response.getStatusLine());
-                return null;
-            });
+            getTaskService().updateTimeSpent(taskId, timeSpent, selectedWorkspaceId, useCustomTaskIds);
+            LOG.warn("Time spent updated for task ID: " + taskId);
         } catch (IOException e) {
             LOG.error("Error updating time spent for task ID: " + taskId, e);
             throw new Exception("Failed to update time spent", e);
@@ -204,7 +187,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         String taskId = task.getId();
         LOG.warn("Updating task state for task ID: " + taskId);
         try {
-            getHttpClient().execute(updateTaskState(state, taskId));
+            getTaskService().updateTaskStatus(taskId, state.getPresentableName(), selectedWorkspaceId, useCustomTaskIds);
         } catch (IOException e) {
             LOG.debug("Error updating task state for task ID: " + taskId, e);
             throw new Exception("Failed to update task state", e);
@@ -216,19 +199,24 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         Set<CustomTaskState> taskStatuses = new HashSet<>();
         LOG.warn("Fetching available task states for task ID: " + task.getId());
 
-        ClickUpTask clickUpTask = fetchTask(task.getId());
-        String spaceId = clickUpTask.getSpace().getId();
-        ClickUpSpace space = fetchSpace(spaceId);
+        try {
+            ClickUpTask clickUpTask = getTaskService().getTask(task.getId(), useCustomTaskIds, selectedWorkspaceId);
+            String spaceId = clickUpTask.getSpace().getId();
+            ClickUpSpace space = getTaskService().getSpace(spaceId);
 
-        space.getStatuses().forEach(state ->
-                taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
+            space.getStatuses().forEach(state ->
+                    taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
 
-        LOG.warn("Available task states: " + taskStatuses.stream()
-                .map(CustomTaskState::getPresentableName)
-                .reduce((a, b) -> a + ", " + b)
-                .orElse(""));
+            LOG.warn("Available task states: " + taskStatuses.stream()
+                    .map(CustomTaskState::getPresentableName)
+                    .reduce((a, b) -> a + ", " + b)
+                    .orElse(""));
 
-        return taskStatuses;
+            return taskStatuses;
+        } catch (IOException e) {
+            LOG.error("Error fetching task states for task ID: " + task.getId(), e);
+            throw new Exception("Failed to fetch task states", e);
+        }
     }
 
     @Override
@@ -246,9 +234,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
             @Override
             protected void doTest() throws Exception {
-                HttpGet httpGet = new HttpGet(getUrl() + "/team");
-                httpGet.addHeader("Authorization", myPassword);
-                getHttpClient().execute(httpGet);
+                getTaskService().testConnection();
             }
         };
     }
@@ -284,74 +270,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         getHttpClient();
     }
 
-    private @NotNull HttpPost trackTimeSpend(@NotNull String timeSpent, /* not supported via ClickUp API v2 */ @NotNull String ignore, String taskId) throws UnsupportedEncodingException {
-        String url = getUrl() + "/task/" + taskId + "/time?custom_task_ids=true&team_id=" + selectedWorkspaceId;
-
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.addHeader("Authorization", myPassword);
-        httpPost.addHeader("Content-Type", "application/json");
-
-        JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("time", timeSpent);
-
-        StringEntity entity = new StringEntity(requestBody.toString());
-        httpPost.setEntity(entity);
-
-        return httpPost;
-    }
-
-    private @NotNull HttpPut updateTaskState(@NotNull CustomTaskState state, String taskId) throws UnsupportedEncodingException {
-        StringBuilder urlBuilder = new StringBuilder(getUrl()).append("/task/").append(taskId).append("?team_id=").append(selectedWorkspaceId);
-        if (useCustomTaskIds) {
-            urlBuilder.append("&custom_task_ids=true");
-        }
-
-        HttpPut httpPut = new HttpPut(urlBuilder.toString());
-        httpPut.addHeader("Authorization", myPassword);
-        httpPut.addHeader("Content-Type", "application/json");
-
-        JsonObject requestBody = new JsonObject();
-        requestBody.addProperty("status", state.getPresentableName());
-
-        StringEntity entity = new StringEntity(requestBody.toString());
-        httpPut.setEntity(entity);
-        return httpPut;
-    }
-
     public List<ClickUpWorkspace> fetchWorkspaces() throws IOException {
-        HttpGet httpGet = new HttpGet(getUrl() + "/team");
-        httpGet.addHeader("Authorization", myPassword);
-        return getHttpClient().execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {
-            }.getType();
-            return ((GetAuthorizedWorkspaces) gson.fromJson(responseBody, listType)).getTeams();
-        });
-    }
-
-    private ClickUpTask fetchTask(String taskId) throws IOException {
-        HttpGet httpGet = new HttpGet(getUrl() + "/task/" + taskId);
-        httpGet.addHeader("Authorization", myPassword);
-        return getHttpClient().execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<ClickUpTask>() {
-            }.getType();
-            ClickUpTask task = gson.fromJson(responseBody, listType);
-            if (task != null) {
-                task.setRepository(this);
-            }
-            return task;
-        });
-    }
-
-    private ClickUpSpace fetchSpace(String spaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(getUrl() + "/space/" + spaceId);
-        httpGet.addHeader("Authorization", myPassword);
-        return getHttpClient().execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<ClickUpSpace>() {
-            }.getType();
-            return gson.fromJson(responseBody, listType);
-        });
+        return getTaskService().getWorkspaces();
     }
 }
