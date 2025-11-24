@@ -185,7 +185,10 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
         HttpGet httpGet = new HttpGet(BASE_URL + "/team");
         httpGet.addHeader("Authorization", apiToken);
         httpClient.execute(httpGet, response -> {
-            EntityUtils.consume(response.getEntity());
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode < 200 || statusCode >= 300) {
+                throw new IOException("Cannot connect to ClickUp API.\nStatus code: " + statusCode);
+            }
             return null;
         });
     }

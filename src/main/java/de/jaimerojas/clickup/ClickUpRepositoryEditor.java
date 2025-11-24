@@ -84,7 +84,7 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         myUseCustomTaskIdsCheckBox = new JCheckBox(ClickUpBundle.message("label.use.custom.task.ids"));
         myAssigneePanel.add(myUseCustomTaskIdsCheckBox, BorderLayout.EAST);
 
-        if (StringUtil.isNotEmpty(myRepository.getPassword())) {
+        if (myRepository.isConfigured() && canConnectToClickUp()) {
             loadWorkspaces();
             loadAssignees();
             loadUseCustomTaskIds();
@@ -93,18 +93,23 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         myApiTokenField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                if (StringUtil.isNotEmpty(myRepository.getPassword())) {
-                    myTestButton.setEnabled(true);
+                // update password in repository with new myApiTokenField value
+                char[] apiToken = myApiTokenField.getPassword();
+                myRepository.setPassword(apiToken != null && apiToken.length > 0 ? String.valueOf(apiToken) : null);
+                myRepository.setTaskService(null);
+                if (myRepository.isConfigured() && canConnectToClickUp()) {
                     myWorkspaceDropdown.setEnabled(true);
                     myAssigneeDropdown.setEnabled(true);
+                    loadWorkspaces();
+                    loadAssignees();
+                    loadUseCustomTaskIds();
                 } else {
-                    myTestButton.setEnabled(false);
                     myWorkspaceDropdown.setEnabled(false);
                     myAssigneeDropdown.setEnabled(false);
                 }
-                loadWorkspaces();
-                loadAssignees();
-                loadUseCustomTaskIds();
+                if (StringUtil.isNotEmpty(myRepository.getPassword())) {
+                    myTestButton.setEnabled(true);
+                }
             }
         });
         myWorkspaceDropdown.addActionListener(e -> loadAssignees());
@@ -121,6 +126,18 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.workspace"), SwingConstants.RIGHT), myWorkspacePanel)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.assignedTo"), SwingConstants.RIGHT), myAssigneePanel)
                 .getPanel();
+    }
+
+    private boolean canConnectToClickUp() {
+        boolean canConnect;
+        try {
+            myRepository.getTaskService().testConnection();
+            canConnect = true;
+        } catch (IOException e) {
+            canConnect = false;
+            LOG.warn("Connection test failed", e);
+        }
+        return canConnect;
     }
 
     @Override
