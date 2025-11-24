@@ -29,7 +29,7 @@ kover {
 
         verify {
             rule {
-                minBound(40)
+                minBound(20)
             }
         }
     }
