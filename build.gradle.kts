@@ -1,7 +1,10 @@
 plugins {
-    java
-    jacoco
-    id("org.jetbrains.intellij.platform") version "2.5.0"
+    id("java") // Java support
+    alias(libs.plugins.kotlin) // Kotlin support
+    alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
+    alias(libs.plugins.changelog) // Gradle Changelog Plugin
+    alias(libs.plugins.qodana) // Gradle Qodana Plugin
+    alias(libs.plugins.kover) // Gradle Kover Plugin
 }
 
 group = "de.jaimerojas"
@@ -15,12 +18,29 @@ repositories {
     }
 }
 
+kover {
+    reports {
+        filters {
+            excludes {
+                // Add exclusions as needed
+                classes("*.BuildConfig", "*.*Test*")
+            }
+        }
+
+        verify {
+            rule {
+                minBound(20)
+            }
+        }
+    }
+}
+
 dependencies {
     intellijPlatform {
         intellijIdeaCommunity("2024.1.7")
         bundledPlugin("com.intellij.tasks")
     }
-    testImplementation("org.junit.jupiter:junit-jupiter:5.10.0")
+    testImplementation(libs.junit5)
     testImplementation("org.mockito:mockito-core:5.7.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.7.0")
 }
@@ -30,47 +50,6 @@ tasks {
     withType<JavaCompile> {
         sourceCompatibility = "17"
         targetCompatibility = "17"
-    }
-
-    jacocoTestReport {
-        dependsOn(test)
-        reports {
-            xml.required = true
-            csv.required = true
-            html.required = true
-        }
-        classDirectories.setFrom(
-            files(classDirectories.files.map {
-                fileTree(it) {
-                    exclude(
-                        "**/ClickUpBundle.class",
-                        "**/ClickUpTaskIconHolder.class"
-                    )
-                }
-            })
-        )
-    }
-
-    jacocoTestCoverageVerification {
-        dependsOn(jacocoTestReport)
-        violationRules {
-            rule {
-                limit {
-                    minimum = "0.40".toBigDecimal()
-                }
-            }
-            rule {
-                enabled = true
-                element = "CLASS"
-                limit {
-                    minimum = "0.30".toBigDecimal()
-                }
-                excludes = listOf(
-                    "de.jaimerojas.clickup.ClickUpBundle",
-                    "de.jaimerojas.clickup.model.ClickUpTaskIconHolder"
-                )
-            }
-        }
     }
 
     patchPluginXml {
