@@ -30,11 +30,8 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Build and run tests
-        run: ./gradlew build test --stacktrace
-
-      - name: Generate JaCoCo coverage report
-        run: ./gradlew jacocoTestReport
+      - name: Build and run tests with Kover coverage
+        run: ./gradlew build test koverXmlReport koverHtmlReport --stacktrace
 
       - name: Upload test results
         if: always()
@@ -48,36 +45,29 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: jacoco-reports
+          name: kover-reports
           path: |
-            build/reports/jacoco/test/html/
-            build/reports/jacoco/test/jacocoTestReport.xml
+            build/reports/kover/html/
+            build/reports/kover/report.xml
           retention-days: 30
 
-      - name: Add coverage to PR
-        id: jacoco
+      - name: Add coverage report to PR
         if: github.event_name == 'pull_request'
-        uses: madrapps/jacoco-report@v1.6.1
+        uses: mi-kas/kover-report@v1
         with:
-          paths: |
-            ${{ github.workspace }}/build/reports/jacoco/test/jacocoTestReport.xml
+          path: ${{ github.workspace }}/build/reports/kover/report.xml
           token: ${{ secrets.GITHUB_TOKEN }}
+          title: '📊 Code Coverage Report'
+          update-comment: true
           min-coverage-overall: 40
           min-coverage-changed-files: 60
-          title: Code Coverage Report
-          update-comment: true
-
-      - name: Get the Coverage info
-        if: github.event_name == 'pull_request'
-        run: |
-          echo "Total coverage ${{ steps.jacoco.outputs.coverage-overall }}"
-          echo "Changed Files coverage ${{ steps.jacoco.outputs.coverage-changed-files }}"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
-          files: ./build/reports/jacoco/test/jacocoTestReport.xml
+          files: ./build/reports/kover/report.xml
           flags: unittests
           name: codecov-umbrella
           fail_ci_if_error: false
+          verbose: true
           token: ${{ secrets.CODECOV_TOKEN }}
