@@ -28,7 +28,7 @@ to [jaimitorojas@gmail.com](mailto:jaimitorojas@gmail.com).
 
 If you find a bug, please report it using our standardized bug report template:
 
-1. Navigate to the [Issues page](https://github.com/rojas-safenow/clickup-integration/issues/new/choose)
+1. Navigate to the [Bug report page](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/new?template=bug_report.yaml)
 2. Select **"Bug Report"** from the available templates
 3. Fill out all required fields, including:
     - Detailed description of the bug
@@ -46,7 +46,7 @@ If you find a bug, please report it using our standardized bug report template:
 
 Have an idea to improve the plugin? We'd love to hear it! Submit a feature request using our template:
 
-1. Navigate to the [Issues page](https://github.com/rojas-safenow/clickup-integration/issues/new/choose)
+1. Navigate to the [Feature request page](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/new?template=feature_request.yaml)
 2. Select **"Feature Request"** from the available templates
 3. Provide detailed information about:
     - What problem the feature would solve
@@ -78,7 +78,7 @@ Please ensure your pull request adheres to the following guidelines:
 
 ## Development Setup
 
-1. Clone the repository: `git clone https://github.com/rojas-safenow/clickup-integration.git`
+1. Clone the repository: `git clone https://github.com/jaim3r0jas/clickup-intellij-plugin.git`
 2. Open the project in IntelliJ IDEA.
 3. Ensure you have the required plugins installed:
     - Gradle
@@ -105,9 +105,9 @@ Please ensure your pull request adheres to the following guidelines:
 
 ## Additional Resources
 
-- **Discussions:** For questions and community discussion, visit our [Discussions page](https://github.com/rojas-safenow/clickup-integration/discussions)
+- **Discussions:** For questions and community discussion, visit our [Discussions page](https://github.com/jaim3r0jas/clickup-intellij-plugin/discussions)
 - **Documentation:** Read the [README](README.md) for setup and usage instructions
-- **Security Issues:** Report security vulnerabilities privately through [GitHub Security Advisories](https://github.com/rojas-safenow/clickup-integration/security/advisories/new)
+- **Security Issues:** Report security vulnerabilities privately through [GitHub Security Advisories](https://github.com/jaim3r0jas/clickup-intellij-plugin/security/advisories/new)
 
 ## License
 
