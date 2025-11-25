@@ -26,15 +26,37 @@ to [jaimitorojas@gmail.com](mailto:jaimitorojas@gmail.com).
 
 ### Reporting Bugs
 
-If you find a bug, please create an issue on
-the [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues) page. Provide detailed information
-about the bug, including steps to reproduce, expected behavior, and screenshots if applicable.
+If you find a bug, please report it using our standardized bug report template:
+
+1. Navigate to the [Issues page](https://github.com/rojas-safenow/clickup-integration/issues/new/choose)
+2. Select **"Bug Report"** from the available templates
+3. Fill out all required fields, including:
+    - Detailed description of the bug
+    - Steps to reproduce
+    - Expected vs. actual behavior
+    - Your IDE version (IntelliJ IDEA, PhpStorm, WebStorm, etc.)
+    - Plugin version
+    - Operating system and Java version
+    - Relevant logs and stack traces
+4. Submit the issue
+
+**Tip:** The more detailed information you provide, the faster we can identify and fix the issue.
 
 ### Suggesting Enhancements
 
-If you have an idea for an enhancement, please create an issue on
-the [GitHub Issues](https://github.com/rojas-safenow/clickup-integration/issues) page. Describe the enhancement in
-detail and explain why it would be beneficial.
+Have an idea to improve the plugin? We'd love to hear it! Submit a feature request using our template:
+
+1. Navigate to the [Issues page](https://github.com/rojas-safenow/clickup-integration/issues/new/choose)
+2. Select **"Feature Request"** from the available templates
+3. Provide detailed information about:
+    - What problem the feature would solve
+    - Your proposed solution
+    - Specific use cases
+    - Expected benefits
+    - Which IDEs should support this feature
+4. Submit the issue
+
+Feature requests with clear use cases and benefits are more likely to be prioritized and implemented.
 
 ### Submitting Pull Requests
 
@@ -48,8 +70,11 @@ detail and explain why it would be beneficial.
 Please ensure your pull request adheres to the following guidelines:
 
 - Include a clear description of the changes.
-- Reference any related issues.
+- Reference any related issues (e.g., "Fixes #123" or "Addresses #456").
 - Ensure your code follows the project's style guides.
+- Add or update tests as necessary.
+- Ensure all tests pass and code coverage requirements are met.
+- Verify code quality with Qodana checks.
 
 ## Development Setup
 
@@ -60,7 +85,8 @@ Please ensure your pull request adheres to the following guidelines:
     - Java
     - Kotlin
 4. Build the project using Gradle: `./gradlew build`
-5. Run the IDE with the plugin: `./gradlew runIde`
+5. Run tests with coverage: `./gradlew koverHtmlReport`
+6. Run the IDE with the plugin: `./gradlew runIde`
 
 ## Style Guides
 
@@ -75,6 +101,13 @@ Please ensure your pull request adheres to the following guidelines:
 
 - Follow the [Google Java Style Guide](https://google.github.io/styleguide/javaguide.html).
 - Follow the [Kotlin Coding Conventions](https://kotlinlang.org/docs/coding-conventions.html).
+- Code quality is validated using Qodana in our CI pipeline.
+
+## Additional Resources
+
+- **Discussions:** For questions and community discussion, visit our [Discussions page](https://github.com/rojas-safenow/clickup-integration/discussions)
+- **Documentation:** Read the [README](README.md) for setup and usage instructions
+- **Security Issues:** Report security vulnerabilities privately through [GitHub Security Advisories](https://github.com/rojas-safenow/clickup-integration/security/advisories/new)
 
 ## License
 

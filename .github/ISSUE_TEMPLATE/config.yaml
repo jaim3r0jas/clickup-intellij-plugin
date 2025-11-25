@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/rojas-safenow/clickup-intellij-plugin/discussions
+    about: Ask questions and discuss ideas with the community
+  - name: 📚 Documentation
+    url: https://github.com/rojas-safenow/clickup-intellij-plugin#readme
+    about: Read the plugin documentation
+  - name: 🐛 Security Issue
+    url: https://github.com/rojas-safenow/clickup-intellij-plugin/security/advisories/new
+    about: Report a security vulnerability privately
