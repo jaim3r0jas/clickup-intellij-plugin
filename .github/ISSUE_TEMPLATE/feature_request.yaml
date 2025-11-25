@@ -1,0 +1,97 @@
+name: Feature Request
+description: Suggest a new feature or enhancement for the ClickUp IntelliJ Plugin
+title: "[FEATURE]: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for suggesting a new feature! Please provide as much detail as possible to help us understand your request.
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear and concise description of the feature you'd like to see.
+      placeholder: I would like to see...
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Statement
+      description: Describe the problem this feature would solve or the need it addresses.
+      placeholder: "I'm currently unable to... / It would be helpful if..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Proposed Solution
+      description: Describe how you envision this feature working.
+      placeholder: The feature should...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Have you considered any alternative solutions or workarounds?
+      placeholder: I've tried...
+
+  - type: checkboxes
+    id: ides
+    attributes:
+      label: Target IDEs
+      description: Which IDEs should support this feature?
+      options:
+        - label: All IntelliJ Platform IDEs
+        - label: IntelliJ IDEA only
+        - label: Specific IDEs (please specify in additional context)
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Describe specific scenarios where this feature would be beneficial.
+      placeholder: |
+        1. When working on...
+        2. During code review...
+        3. While managing tasks...
+    validations:
+      required: true
+
+  - type: textarea
+    id: benefits
+    attributes:
+      label: Expected Benefits
+      description: How would this feature improve the plugin or your workflow?
+      placeholder: |
+        - Saves time by...
+        - Improves productivity by...
+        - Solves the problem of...
+    validations:
+      required: true
+
+  - type: textarea
+    id: mockups
+    attributes:
+      label: Mockups or Examples
+      description: If you have mockups, screenshots, or examples from other tools, please attach them here.
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Add any other context about the feature request here.
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to contribute this feature?
+      options:
+        - label: I'm willing to submit a pull request for this feature
