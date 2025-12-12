@@ -15,6 +15,7 @@ Integrate ClickUp with JetBrains IDEs to manage tasks and track time directly wi
 - Automatically create feature branches and change lists.
 - Set commit message templates.
 - Log time entries to tasks.
+- **Conventional Commits support** - Use placeholders to compose commit messages following the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 
 #### Installation
 

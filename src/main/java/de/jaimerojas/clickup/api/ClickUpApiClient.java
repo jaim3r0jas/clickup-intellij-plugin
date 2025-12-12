@@ -76,6 +76,27 @@ public interface ClickUpApiClient {
     ClickUpSpace fetchSpace(@NotNull String spaceId) throws IOException;
 
     /**
+     * Fetches custom items by custom item ID.
+     *
+     * @param workspaceId The workspace ID
+     * @return List of custom items
+     * @throws IOException if the request fails
+     */
+    @NotNull
+    List<ClickUpCustomItem> fetchCustomItems(@NotNull String workspaceId) throws IOException;
+
+    /**
+     * Fetches a custom item by ID.
+     *
+     * @param customItemId The custom item ID
+     * @param workspaceId The workspace ID
+     * @return The custom item
+     * @throws IOException if the request fails
+     */
+    @NotNull
+    ClickUpCustomItem fetchCustomItem(@NotNull String customItemId, @NotNull String workspaceId) throws IOException;
+
+    /**
      * Tracks time spent on a task.
      *
      * @param taskId The task ID

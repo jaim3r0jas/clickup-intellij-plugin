@@ -33,6 +33,7 @@ import static de.jaimerojas.clickup.model.ClickUpTaskIconHolder.CLICKUP_ICON;
 public class ClickUpTask extends Task {
     private String id;
     private String custom_id;
+    private String custom_item_id;
     private String name;
     private String description;
     private String date_updated;
@@ -41,6 +42,7 @@ public class ClickUpTask extends Task {
     private ClickUpTaskState status;
     private String url;
     private ClickUpSpaceIdOnly space;
+    private ClickUpCustomItem customItem;
     private ClickUpRepository taskRepository;
 
     @Override
@@ -60,7 +62,20 @@ public class ClickUpTask extends Task {
 
     @Override
     public @NotNull TaskType getType() {
-        return TaskType.FEATURE;// clickup does not provide task type in the API (GET /task)
+        if (customItem != null) {
+            var customTaskType = customItem.getName().toLowerCase();
+            if (customTaskType.matches("(bug|bugs|issue|issues|defect|defects)")) {
+                return TaskType.BUG;
+            } else if (customTaskType.matches("(task|tasks|story|stories|user story|user stories|feature|features)")) {
+                return TaskType.FEATURE;
+            } else if (customTaskType.matches("(ex|exception|exceptions|error|errors|incident|incidents)")) {
+                return TaskType.EXCEPTION;
+            } else {
+                return TaskType.OTHER;
+            }
+        } else {
+            return TaskType.FEATURE;
+        }
     }
 
     @Override
@@ -100,6 +115,14 @@ public class ClickUpTask extends Task {
 
     public void setCustom_id(String custom_id) {
         this.custom_id = custom_id;
+    }
+
+    public String getCustom_item_id() {
+        return custom_item_id;
+    }
+
+    public void setCustom_item_id(String custom_item_id) {
+        this.custom_item_id = custom_item_id;
     }
 
     public String getName() {
@@ -177,6 +200,14 @@ public class ClickUpTask extends Task {
         this.space = space;
     }
 
+    public ClickUpCustomItem getCustomItem() {
+        return customItem;
+    }
+
+    public void setCustomItem(ClickUpCustomItem customItem) {
+        this.customItem = customItem;
+    }
+
     @Override
     public @Nullable TaskRepository getRepository() {
         return taskRepository;
@@ -189,5 +220,10 @@ public class ClickUpTask extends Task {
     @Override
     public @Nullable String getIssueUrl() {
         return this.url;
+    }
+
+    @Override
+    public @Nullable String getProject() {
+        return extractProjectFromId(this.getPresentableId());
     }
 }

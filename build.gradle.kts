@@ -37,7 +37,7 @@ kover {
 
 dependencies {
     intellijPlatform {
-        intellijIdeaCommunity("2024.1.7")
+        intellijIdea("2025.3")
         bundledPlugin("com.intellij.tasks")
     }
     testImplementation(libs.junit5)
