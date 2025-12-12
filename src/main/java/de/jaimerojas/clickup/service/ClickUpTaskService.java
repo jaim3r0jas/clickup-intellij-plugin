@@ -16,6 +16,7 @@
 package de.jaimerojas.clickup.service;
 
 import de.jaimerojas.clickup.api.ClickUpApiClient;
+import de.jaimerojas.clickup.model.ClickUpCustomItem;
 import de.jaimerojas.clickup.model.ClickUpSpace;
 import de.jaimerojas.clickup.model.ClickUpTask;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
@@ -69,6 +70,10 @@ public class ClickUpTaskService {
      */
     public @NotNull ClickUpSpace getSpace(@NotNull String spaceId) throws IOException {
         return apiClient.fetchSpace(spaceId);
+    }
+
+    public @NotNull ClickUpCustomItem getCustomItem(@NotNull String workspaceId, @NotNull String customItemId) throws IOException {
+        return apiClient.fetchCustomItem(customItemId, workspaceId);
     }
 
     /**

@@ -123,6 +123,32 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
     }
 
     @Override
+    public @NotNull List<ClickUpCustomItem> fetchCustomItems(@NotNull String workspaceId) throws IOException {
+        HttpGet httpGet = new HttpGet(BASE_URL + "/team/" + workspaceId + "/custom_item");
+        httpGet.addHeader("Authorization", apiToken);
+
+        return httpClient.execute(httpGet, response -> {
+            String responseBody = EntityUtils.toString(response.getEntity());
+            Type listType = new TypeToken<GetCustomItems>() {
+            }.getType();
+            GetCustomItems getCustomItems = gson.fromJson(responseBody, listType);
+            return getCustomItems.getCustom_items();
+        });
+    }
+
+    @Override
+    public @NotNull ClickUpCustomItem fetchCustomItem(@NotNull String customItemId, @NotNull String workspaceId) throws IOException {
+        if (customItemId.equals("0")) {
+            return new ClickUpCustomItem("0", "Task", "Tasks", "Default ClickUp task type", null);
+        }
+
+        return fetchCustomItems(workspaceId).stream()
+                .filter(item -> item.getId().equals(customItemId))
+                .findFirst()
+                .orElseThrow(() -> new IOException("Custom item not found: " + customItemId));
+    }
+
+    @Override
     public void trackTimeSpent(
             @NotNull String taskId,
             long timeSpentMillis,
