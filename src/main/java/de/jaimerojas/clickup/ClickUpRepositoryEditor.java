@@ -15,6 +15,7 @@
  */
 package de.jaimerojas.clickup;
 
+import com.intellij.ide.BrowserUtil;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.diagnostic.Logger;
@@ -23,6 +24,7 @@ import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.config.BaseRepositoryEditor;
 import com.intellij.ui.JBColor;
+import com.intellij.ui.components.ActionLink;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPasswordField;
 import com.intellij.util.Consumer;
@@ -35,6 +37,7 @@ import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.ActionListener;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
 import java.util.List;
@@ -87,6 +90,12 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         myApiTokenField.getEmptyText().setText(ClickUpBundle.message("label.api.token.hint"));
         JPanel myApiTokenPanel = new JPanel(new BorderLayout(5, 0));
         myApiTokenPanel.add(myApiTokenField, BorderLayout.CENTER);
+        // #42: ClickUp's page for personal API tokens, one click away
+        ActionLink generateTokenLink = new ActionLink(ClickUpBundle.message("link.clickup.generate.token"),
+                (ActionListener) e -> BrowserUtil.browse(ClickUpRepositoryType.API_TOKEN_SETTINGS_URL));
+        generateTokenLink.setExternalLinkIcon();
+        generateTokenLink.setToolTipText(ClickUpRepositoryType.API_TOKEN_SETTINGS_URL);
+        myApiTokenPanel.add(generateTokenLink, BorderLayout.EAST);
 
         myErrorLabel = new JBLabel();
         myErrorLabel.setForeground(JBColor.RED);
