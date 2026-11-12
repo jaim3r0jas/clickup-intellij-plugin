@@ -18,7 +18,7 @@ The CI/CD pipeline has been streamlined into two lean, efficient workflows that 
 - ✅ Builds the plugin
 - ✅ Runs all tests
 - ✅ Generates Kover coverage reports (XML + HTML)
-- ✅ Verifies coverage thresholds (40% overall, 60% changed files)
+- ✅ Verifies the coverage threshold (`koverVerify`, 20%)
 - ✅ Uploads test results as artifacts
 - ✅ Uploads coverage reports as artifacts
 - ✅ Uploads plugin distribution as artifact
@@ -73,9 +73,10 @@ The publish workflow ensures that only tags based on the `main` branch can trigg
 ## Quality Gates
 
 ### Coverage Requirements
-- **Overall Coverage:** Minimum 40%
-- **Changed Files:** Minimum 60%
-- Violations are reported but don't fail the build (continue-on-error)
+- **`koverVerify`:** minimum 20% (`build.gradle.kts`). In the CI Pipeline a violation is reported but doesn't fail
+  the build (continue-on-error); in the Publish Pipeline it blocks the release.
+- **PR coverage comment:** flags overall coverage under 40% and changed files under 60%.
+- **Codecov:** project target 20%, patch target 60% (`codecov.yml`).
 
 ### Code Quality (Qodana)
 - Runs on every push and PR
