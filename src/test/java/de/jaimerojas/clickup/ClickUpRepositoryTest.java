@@ -37,6 +37,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -46,8 +47,9 @@ import static org.mockito.Mockito.when;
  * Unit tests for {@link ClickUpRepository}.
  * <p>
  * Note: Some tests are intentionally omitted as they require IntelliJ Application context:
- * - getIssues() tests - require EmptyProgressIndicator initialization
- * - clone() and equals() tests - require PasswordSafe service
+ * - getIssues(query, offset, limit, withClosed, cancelled) - requires EmptyProgressIndicator initialization (the
+ *   four-argument getIssues, which holds the logic, is tested)
+ * - the copy constructor, clone() and equals() - require the PasswordSafe service
  * <p>
  * For full integration testing, use IntelliJ's LightPlatformTestCase.
  * Service layer logic is thoroughly tested in {@link de.jaimerojas.clickup.service.ClickUpTaskServiceTest}.
@@ -154,7 +156,7 @@ class ClickUpRepositoryTest {
             // Assert
             assertNotNull(result, "Task should not be null");
             assertNull(((ClickUpTask) result).getCustomItem());
-            verify(taskService, never()).getCustomItem(any(), any());
+            verify(taskService, never()).getCustomItemsById(any());
         }
 
         @Test
@@ -167,8 +169,8 @@ class ClickUpRepositoryTest {
 
             when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
                     .thenReturn(expectedTask);
-            when(taskService.getCustomItem(TEST_WORKSPACE_ID, "1001"))
-                    .thenThrow(new IOException("Custom item not found: 1001"));
+            when(taskService.getCustomItemsById(TEST_WORKSPACE_ID))
+                    .thenThrow(new IOException("ClickUp is down"));
 
             // Act
             Task result = repository.findTask(TEST_TASK_ID);
@@ -189,8 +191,8 @@ class ClickUpRepositoryTest {
 
             when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
                     .thenReturn(expectedTask);
-            when(taskService.getCustomItem(TEST_WORKSPACE_ID, "1001"))
-                    .thenReturn(customItem);
+            when(taskService.getCustomItemsById(TEST_WORKSPACE_ID))
+                    .thenReturn(java.util.Map.of("1001", customItem));
 
             // Act
             Task result = repository.findTask(TEST_TASK_ID);
@@ -342,6 +344,112 @@ class ClickUpRepositoryTest {
 
             space.setStatuses(Arrays.asList(state1, state2));
             return space;
+        }
+    }
+
+    @Nested
+    @DisplayName("Task list (#66)")
+    class TaskList {
+
+        private ClickUpTask task(String id, String customItemId) {
+            ClickUpTask task = new ClickUpTask();
+            task.setId(id);
+            task.setCustom_item_id(customItemId);
+            return task;
+        }
+
+        @Test
+        @DisplayName("Fetches the custom task types once for the whole list, not once per task")
+        void getIssues_shouldFetchCustomItemsOnce() throws IOException {
+            when(taskService.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 50, false, false)).thenReturn(List.of(
+                    task("t1", "1001"), task("t2", "1001"), task("t3", "1002"), task("t4", "0"), task("t5", null)));
+            ClickUpCustomItem bug = new ClickUpCustomItem("1001", "Bug", "Bugs", null, null);
+            when(taskService.getCustomItemsById(TEST_WORKSPACE_ID)).thenReturn(java.util.Map.of(
+                    "1001", bug, ClickUpCustomItem.DEFAULT_TASK_ID, ClickUpCustomItem.defaultTask()));
+
+            Task[] issues = repository.getIssues(null, 0, 50, false);
+
+            assertEquals(5, issues.length);
+            verify(taskService, org.mockito.Mockito.times(1)).getCustomItemsById(TEST_WORKSPACE_ID);
+            assertSame(bug, ((ClickUpTask) issues[0]).getCustomItem());
+            assertNull(((ClickUpTask) issues[2]).getCustomItem(), "an unknown type keeps the default");
+            assertEquals("0", ((ClickUpTask) issues[3]).getCustomItem().getId());
+        }
+
+        @Test
+        @DisplayName("Needs no custom type request when every task has the default type")
+        void getIssues_shouldSkipCustomItemsForDefaultTypes() throws IOException {
+            when(taskService.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, false, true))
+                    .thenReturn(List.of(task("t1", "0"), task("t2", null)));
+
+            assertEquals(2, repository.getIssues(null, 0, 20, true).length);
+            verify(taskService, never()).getCustomItemsById(anyString());
+        }
+
+        @Test
+        @DisplayName("A failure doesn't throw, so the IDE doesn't stop asking this server")
+        void getIssues_shouldNotThrowOnFailure() throws IOException {
+            when(taskService.getTasks(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean()))
+                    .thenThrow(new de.jaimerojas.clickup.api.ClickUpApiException(429, "APP_002", "Rate limit reached"));
+
+            assertEquals(0, repository.getIssues(null, 0, 20, false).length);
+        }
+
+        @Test
+        @DisplayName("A failure gives the last tasks this request got, so the IDE's task list doesn't go blank")
+        void getIssues_shouldReturnLastGoodTasksOnFailure() throws IOException {
+            when(taskService.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, false, false))
+                    .thenReturn(List.of(task("t1", null), task("t2", null)))
+                    .thenThrow(new de.jaimerojas.clickup.api.ClickUpApiException(429, "APP_002", "Rate limit reached"));
+
+            Task[] first = repository.getIssues(null, 0, 20, false);
+            Task[] afterFailure = repository.getIssues(null, 0, 20, false);
+
+            assertEquals(2, first.length);
+            assertArrayEquals(first, afterFailure);
+        }
+
+        @Test
+        @DisplayName("A rejected token gives no tasks, not the last ones: old tasks would hide the problem")
+        void getIssues_shouldNotFallBackOnRejectedToken() throws IOException {
+            when(taskService.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, false, false))
+                    .thenReturn(List.of(task("t1", null)))
+                    .thenThrow(new de.jaimerojas.clickup.api.ClickUpApiException(401, "OAUTH_025", "Token invalid"));
+
+            assertEquals(1, repository.getIssues(null, 0, 20, false).length);
+            assertEquals(0, repository.getIssues(null, 0, 20, false).length);
+        }
+
+        @Test
+        @DisplayName("A runtime error in the custom task types keeps the tasks, with the default type")
+        void getIssues_shouldKeepTasksWhenCustomTypesFail() throws IOException {
+            when(taskService.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, false, false))
+                    .thenReturn(List.of(task("t1", "1001")));
+            when(taskService.getCustomItemsById(TEST_WORKSPACE_ID))
+                    .thenThrow(new com.google.gson.JsonSyntaxException("unexpected shape"));
+
+            Task[] issues = repository.getIssues(null, 0, 20, false);
+
+            assertEquals(1, issues.length);
+            assertNull(((ClickUpTask) issues[0]).getCustomItem());
+        }
+
+        @Test
+        @DisplayName("An unexpected runtime error gives no tasks instead of throwing")
+        void getIssues_shouldNotThrowOnRuntimeError() throws IOException {
+            when(taskService.getTasks(anyString(), anyString(), anyInt(), anyInt(), anyBoolean(), anyBoolean()))
+                    .thenThrow(new IllegalStateException("boom"));
+
+            assertEquals(0, repository.getIssues(null, 0, 20, false).length);
+        }
+
+        @Test
+        @DisplayName("Without a workspace there is nothing to ask ClickUp")
+        void getIssues_shouldReturnNothingWithoutWorkspace() throws IOException {
+            repository.setSelectedWorkspaceId(null);
+
+            assertEquals(0, repository.getIssues(null, 0, 20, false).length);
+            verify(taskService, never()).getTasks(any(), any(), anyInt(), anyInt(), anyBoolean(), anyBoolean());
         }
     }
 

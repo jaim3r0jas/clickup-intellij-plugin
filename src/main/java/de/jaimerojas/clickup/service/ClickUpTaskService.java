@@ -20,21 +20,52 @@ import de.jaimerojas.clickup.model.ClickUpCustomItem;
 import de.jaimerojas.clickup.model.ClickUpSpace;
 import de.jaimerojas.clickup.model.ClickUpTask;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
+import de.jaimerojas.clickup.model.GetTasks;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.LongSupplier;
 
 /**
  * Service layer for ClickUp task operations.
  * Separates business logic from repository implementation.
  */
 public class ClickUpTaskService {
+    /**
+     * At most this many ClickUp pages per call: ClickUp allows 100 requests a minute per token.
+     */
+    static final int MAX_PAGES_PER_CALL = 5;
+    /**
+     * A ClickUp page is reused this long: the IDE asks in slices of 20 or 50, which all fall in the same page.
+     */
+    static final long PAGE_CACHE_MILLIS = 30_000;
+    /**
+     * A workspace's custom task types change rarely: they are fetched again after this long.
+     */
+    static final long CUSTOM_ITEMS_CACHE_MILLIS = 10 * 60_000;
+    private static final int MAX_CACHED_PAGES = 50;
+
     private final ClickUpApiClient apiClient;
+    private final LongSupplier clock;
+    private final Map<String, Timed<GetTasks>> pages = new ConcurrentHashMap<>();
+    private final Map<String, Timed<Map<String, ClickUpCustomItem>>> customItems = new ConcurrentHashMap<>();
+
+    private record Timed<T>(T value, long fetchedAt) {
+    }
 
     public ClickUpTaskService(@NotNull ClickUpApiClient apiClient) {
+        this(apiClient, System::currentTimeMillis);
+    }
+
+    ClickUpTaskService(@NotNull ClickUpApiClient apiClient, @NotNull LongSupplier clock) {
         this.apiClient = apiClient;
+        this.clock = clock;
     }
 
     /**
@@ -45,17 +76,92 @@ public class ClickUpTaskService {
     }
 
     /**
-     * Fetches tasks with pagination.
+     * Fetches the tasks from {@code offset} to {@code offset + limit} (the IDE's paging) across ClickUp's pages of
+     * {@value ClickUpApiClient#PAGE_SIZE}, stopping at the last page and after {@value #MAX_PAGES_PER_CALL} pages.
+     * Offsets count ClickUp's tasks as it sends them, so slices of different calls line up; a task without an ID
+     * (which ClickUp doesn't send in a list) is then left out of the slice.
      */
     public @NotNull List<ClickUpTask> getTasks(
             @NotNull String workspaceId,
             String assigneeId,
             int offset,
-            boolean useCustomTaskIds
+            int limit,
+            boolean useCustomTaskIds,
+            boolean includeClosed
     ) throws IOException {
-        int clickUpLimit = 100; // ClickUp API always uses 100
-        int page = offset / clickUpLimit;
-        return apiClient.fetchTasks(workspaceId, assigneeId, page, useCustomTaskIds);
+        int pageSize = ClickUpApiClient.PAGE_SIZE;
+        int wanted = limit > 0 ? limit : pageSize;
+        int page = Math.max(offset, 0) / pageSize;
+        int skip = Math.max(offset, 0) % pageSize;
+
+        // a slice that starts inside a page may need one page more than MAX_PAGES_PER_CALL to be complete
+        int maxPages = MAX_PAGES_PER_CALL + (skip > 0 ? 1 : 0);
+        List<ClickUpTask> result = new ArrayList<>();
+        int taken = 0;
+        for (int fetched = 0; fetched < maxPages && taken < wanted; fetched++, page++, skip = 0) {
+            GetTasks clickUpPage = fetchPage(workspaceId, assigneeId, page, useCustomTaskIds, includeClosed);
+            List<ClickUpTask> tasks = clickUpPage.getTasks();
+            for (int i = skip; i < tasks.size() && taken < wanted; i++, taken++) {
+                if (tasks.get(i) != null && tasks.get(i).hasId()) {
+                    result.add(tasks.get(i));
+                }
+            }
+            boolean lastPage = clickUpPage.getLast_page() != null
+                    ? clickUpPage.getLast_page()
+                    : clickUpPage.getTasks().size() < pageSize;
+            if (lastPage) {
+                break;
+            }
+        }
+        return result;
+    }
+
+    // synchronized: two refreshes at once (the IDE's background update and the Open Task popup) send one request
+    private synchronized @NotNull GetTasks fetchPage(
+            @NotNull String workspaceId,
+            String assigneeId,
+            int page,
+            boolean useCustomTaskIds,
+            boolean includeClosed
+    ) throws IOException {
+        String key = String.join("|", workspaceId, String.valueOf(assigneeId), String.valueOf(page),
+                String.valueOf(useCustomTaskIds), String.valueOf(includeClosed));
+        long now = clock.getAsLong();
+        Timed<GetTasks> cached = pages.get(key);
+        if (cached != null && now - cached.fetchedAt() < PAGE_CACHE_MILLIS) {
+            return cached.value();
+        }
+        GetTasks fetched = apiClient.fetchTasks(workspaceId, assigneeId, page, useCustomTaskIds, includeClosed);
+        if (pages.size() >= MAX_CACHED_PAGES) {
+            pages.values().removeIf(entry -> now - entry.fetchedAt() >= PAGE_CACHE_MILLIS);
+            if (pages.size() >= MAX_CACHED_PAGES) {
+                pages.clear();
+            }
+        }
+        pages.put(key, new Timed<>(fetched, now));
+        return fetched;
+    }
+
+    /**
+     * The workspace's custom task types by ID, ClickUp's default task type ("0") included. Fetched with one request
+     * and reused for {@value #CUSTOM_ITEMS_CACHE_MILLIS} ms.
+     */
+    public synchronized @NotNull Map<String, ClickUpCustomItem> getCustomItemsById(@NotNull String workspaceId) throws IOException {
+        long now = clock.getAsLong();
+        Timed<Map<String, ClickUpCustomItem>> cached = customItems.get(workspaceId);
+        if (cached != null && now - cached.fetchedAt() < CUSTOM_ITEMS_CACHE_MILLIS) {
+            return cached.value();
+        }
+        Map<String, ClickUpCustomItem> byId = new HashMap<>();
+        for (ClickUpCustomItem item : apiClient.fetchCustomItems(workspaceId)) {
+            if (item != null && item.getId() != null) {
+                byId.put(item.getId(), item);
+            }
+        }
+        byId.put(ClickUpCustomItem.DEFAULT_TASK_ID, ClickUpCustomItem.defaultTask());
+        Map<String, ClickUpCustomItem> result = Map.copyOf(byId);
+        customItems.put(workspaceId, new Timed<>(result, now));
+        return result;
     }
 
     /**
@@ -70,10 +176,6 @@ public class ClickUpTaskService {
      */
     public @NotNull ClickUpSpace getSpace(@NotNull String spaceId) throws IOException {
         return apiClient.fetchSpace(spaceId);
-    }
-
-    public @NotNull ClickUpCustomItem getCustomItem(@NotNull String workspaceId, @NotNull String customItemId) throws IOException {
-        return apiClient.fetchCustomItem(customItemId, workspaceId);
     }
 
     /**
@@ -107,6 +209,8 @@ public class ClickUpTaskService {
             boolean useCustomTaskIds
     ) throws IOException {
         apiClient.updateTaskStatus(taskId, statusName, workspaceId, useCustomTaskIds);
+        // the cached pages show the old status (and a closed task where closed tasks are left out)
+        pages.clear();
     }
 
     /**

@@ -20,6 +20,16 @@ import java.util.Objects;
 
 public class GetTasks {
     private List<ClickUpTask> tasks;
+    // ClickUp's own "no more pages" flag; null when the answer doesn't carry it
+    private Boolean last_page;
+
+    public GetTasks() {
+    }
+
+    public GetTasks(List<ClickUpTask> tasks, Boolean lastPage) {
+        this.tasks = tasks;
+        this.last_page = lastPage;
+    }
 
     public List<ClickUpTask> getTasks() {
         return tasks;
@@ -29,15 +39,23 @@ public class GetTasks {
         this.tasks = tasks;
     }
 
+    public Boolean getLast_page() {
+        return last_page;
+    }
+
+    public void setLast_page(Boolean last_page) {
+        this.last_page = last_page;
+    }
+
     @Override
     public final boolean equals(Object o) {
         if (!(o instanceof GetTasks getTasks)) return false;
 
-        return Objects.equals(tasks, getTasks.tasks);
+        return Objects.equals(tasks, getTasks.tasks) && Objects.equals(last_page, getTasks.last_page);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(tasks);
+        return Objects.hash(tasks, last_page);
     }
 }

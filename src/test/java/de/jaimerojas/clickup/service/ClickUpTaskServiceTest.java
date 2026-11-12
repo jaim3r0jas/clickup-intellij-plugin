@@ -19,6 +19,8 @@ import de.jaimerojas.clickup.api.ClickUpApiClient;
 import de.jaimerojas.clickup.model.ClickUpSpace;
 import de.jaimerojas.clickup.model.ClickUpTask;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
+import de.jaimerojas.clickup.model.GetTasks;
+import de.jaimerojas.clickup.model.ClickUpCustomItem;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -108,60 +110,204 @@ class ClickUpTaskServiceTest {
             verify(apiClient).fetchTask(TEST_TASK_ID, false, null);
         }
 
-        @ParameterizedTest(name = "Offset {0} should calculate page {1}")
-        @CsvSource({
-                "0, 0",      // First page
-                "100, 1",    // Second page
-                "200, 2",    // Third page
-                "50, 0",     // Partial first page
-                "150, 1",    // Partial second page
-                "999, 9"     // High offset
-        })
-        @DisplayName("Should calculate pagination correctly")
-        void getTasks_shouldCalculatePageCorrectly(int offset, int expectedPage) throws IOException {
-            // Arrange
-            List<ClickUpTask> tasks = Arrays.asList(new ClickUpTask(), new ClickUpTask());
+        @Test
+        @DisplayName("Offset 0, limit 20: the first 20 tasks of page 0")
+        void getTasks_shouldSliceFirstPage() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, true, false)).thenReturn(page(0, 100));
 
-            when(apiClient.fetchTasks(eq(TEST_WORKSPACE_ID), eq(TEST_ASSIGNEE_ID), eq(expectedPage), eq(true)))
-                    .thenReturn(tasks);
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, true, false);
 
-            // Act
-            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, offset, true);
-
-            // Assert
-            assertEquals(2, result.size());
-            verify(apiClient).fetchTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, expectedPage, true);
+            assertEquals(ids(0, 20), idsOf(result));
         }
 
         @Test
-        @DisplayName("Should fetch tasks with null assignee")
-        void getTasks_shouldHandleNullAssignee() throws IOException {
-            // Arrange
-            List<ClickUpTask> tasks = Collections.singletonList(new ClickUpTask());
+        @DisplayName("Offset 20, limit 20: the next 20 tasks, not page 0 again (#66)")
+        void getTasks_shouldReturnSecondSliceAtOffset20() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, false, false)).thenReturn(page(0, 100));
 
-            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false))
-                    .thenReturn(tasks);
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 20, 20, false, false);
 
-            // Act
-            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 0, false);
+            assertEquals(ids(20, 40), idsOf(result));
+        }
 
-            // Assert
-            assertEquals(1, result.size());
+        @Test
+        @DisplayName("A slice across two ClickUp pages fetches both")
+        void getTasks_shouldSpanPages() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(page(0, 100));
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 1, false, false)).thenReturn(page(100, 100));
+
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 90, 20, false, false);
+
+            assertEquals(ids(90, 110), idsOf(result));
+        }
+
+        @Test
+        @DisplayName("Stops at the last page (fewer than 100 tasks)")
+        void getTasks_shouldStopAtLastPage() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(page(0, 30));
+
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 0, 50, false, false);
+
+            assertEquals(30, result.size());
+            verify(apiClient, never()).fetchTasks(TEST_WORKSPACE_ID, null, 1, false, false);
+        }
+
+        @Test
+        @DisplayName("Never fetches more than 5 pages in one call (ClickUp's rate limit)")
+        void getTasks_shouldCapPagesPerCall() throws IOException {
+            when(apiClient.fetchTasks(eq(TEST_WORKSPACE_ID), isNull(), anyInt(), eq(false), eq(false)))
+                    .thenAnswer(invocation -> page(invocation.<Integer>getArgument(2) * 100, 100));
+
+
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 0, 10_000, false, false);
+
+            assertEquals(500, result.size());
+            verify(apiClient, times(5)).fetchTasks(eq(TEST_WORKSPACE_ID), isNull(), anyInt(), eq(false), eq(false));
+        }
+
+        @Test
+        @DisplayName("Passes include closed through")
+        void getTasks_shouldPassIncludeClosed() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, true)).thenReturn(page(0, 1));
+
+            assertEquals(1, service.getTasks(TEST_WORKSPACE_ID, null, 0, 20, false, true).size());
         }
 
         @Test
         @DisplayName("Should return empty list when no tasks found")
         void getTasks_shouldReturnEmptyListWhenNoTasks() throws IOException {
-            // Arrange
-            when(apiClient.fetchTasks(anyString(), anyString(), anyInt(), anyBoolean()))
-                    .thenReturn(Collections.emptyList());
+            when(apiClient.fetchTasks(anyString(), anyString(), anyInt(), anyBoolean(), anyBoolean()))
+                    .thenReturn(new GetTasks(Collections.emptyList(), true));
 
-            // Act
-            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, false);
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, TEST_ASSIGNEE_ID, 0, 20, false, false);
 
-            // Assert
             assertNotNull(result);
             assertTrue(result.isEmpty());
+        }
+
+        /**
+         * A ClickUp page of tasks with IDs firstId..firstId+count-1, without the last_page flag (as older answers).
+         */
+        private GetTasks page(int firstId, int count) {
+            List<ClickUpTask> tasks = new java.util.ArrayList<>();
+            for (int i = firstId; i < firstId + count; i++) {
+                ClickUpTask task = new ClickUpTask();
+                task.setId(String.valueOf(i));
+                tasks.add(task);
+            }
+            return new GetTasks(tasks, null);
+        }
+
+        @Test
+        @DisplayName("Follows ClickUp's last_page flag over the page size")
+        void getTasks_shouldFollowLastPageFlag() throws IOException {
+            GetTasks shortButNotLast = page(0, 90);
+            shortButNotLast.setLast_page(false);
+            GetTasks fullButLast = page(90, 100);
+            fullButLast.setLast_page(true);
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(shortButNotLast);
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 1, false, false)).thenReturn(fullButLast);
+
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 0, 500, false, false);
+
+            assertEquals(190, result.size());
+            verify(apiClient, never()).fetchTasks(TEST_WORKSPACE_ID, null, 2, false, false);
+        }
+
+        @Test
+        @DisplayName("Offsets count ClickUp's tasks as sent, so slices line up; a task without an ID is left out (#55)")
+        void getTasks_shouldCountRawTasksAndDropTasksWithoutId() throws IOException {
+            GetTasks withBlank = page(0, 30);
+            withBlank.getTasks().set(1, new ClickUpTask());
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(withBlank);
+
+            List<ClickUpTask> first = service.getTasks(TEST_WORKSPACE_ID, null, 0, 10, false, false);
+            List<ClickUpTask> second = service.getTasks(TEST_WORKSPACE_ID, null, 10, 10, false, false);
+
+            assertEquals(List.of("0", "2", "3", "4", "5", "6", "7", "8", "9"), idsOf(first));
+            assertEquals(ids(10, 20), idsOf(second));
+        }
+
+        @Test
+        @DisplayName("A slice starting inside a page still gets its full 5 pages' worth")
+        void getTasks_shouldNotShortenSliceStartingInsidePage() throws IOException {
+            when(apiClient.fetchTasks(eq(TEST_WORKSPACE_ID), isNull(), anyInt(), eq(false), eq(false)))
+                    .thenAnswer(invocation -> page(invocation.<Integer>getArgument(2) * 100, 100));
+
+            List<ClickUpTask> result = service.getTasks(TEST_WORKSPACE_ID, null, 50, 500, false, false);
+
+            assertEquals(ids(50, 550), idsOf(result));
+        }
+
+        @Test
+        @DisplayName("A status change made from the IDE drops the cached pages")
+        void updateTaskStatus_shouldDropCachedPages() throws IOException {
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(page(0, 10));
+
+            service.getTasks(TEST_WORKSPACE_ID, null, 0, 20, false, false);
+            service.updateTaskStatus("1", "closed", TEST_WORKSPACE_ID, false);
+            service.getTasks(TEST_WORKSPACE_ID, null, 0, 20, false, false);
+
+            verify(apiClient, times(2)).fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false);
+        }
+
+        @Test
+        @DisplayName("The IDE's slices of one ClickUp page cost one request, until the page is 30 s old")
+        void getTasks_shouldReuseRecentPage() throws IOException {
+            long[] now = {1_000_000};
+            ClickUpTaskService cachingService = new ClickUpTaskService(apiClient, () -> now[0]);
+            when(apiClient.fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false)).thenReturn(page(0, 100));
+
+            cachingService.getTasks(TEST_WORKSPACE_ID, null, 0, 20, false, false);
+            cachingService.getTasks(TEST_WORKSPACE_ID, null, 20, 20, false, false);
+            cachingService.getTasks(TEST_WORKSPACE_ID, null, 40, 20, false, false);
+            verify(apiClient, times(1)).fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false);
+
+            now[0] += ClickUpTaskService.PAGE_CACHE_MILLIS;
+            cachingService.getTasks(TEST_WORKSPACE_ID, null, 0, 20, false, false);
+            verify(apiClient, times(2)).fetchTasks(TEST_WORKSPACE_ID, null, 0, false, false);
+        }
+
+        private List<String> ids(int fromInclusive, int toExclusive) {
+            return java.util.stream.IntStream.range(fromInclusive, toExclusive).mapToObj(String::valueOf).toList();
+        }
+
+        private List<String> idsOf(List<ClickUpTask> tasks) {
+            return tasks.stream().map(ClickUpTask::getId).toList();
+        }
+    }
+
+    @Nested
+    @DisplayName("Custom task types")
+    class CustomTaskTypes {
+
+        @Test
+        @DisplayName("One request gives every type by ID, the default type included")
+        void getCustomItemsById_shouldMapTypesAndDefault() throws IOException {
+            ClickUpCustomItem bug = new ClickUpCustomItem("1001", "Bug", "Bugs", null, null);
+            when(apiClient.fetchCustomItems(TEST_WORKSPACE_ID)).thenReturn(List.of(bug));
+
+            java.util.Map<String, ClickUpCustomItem> byId = service.getCustomItemsById(TEST_WORKSPACE_ID);
+
+            assertSame(bug, byId.get("1001"));
+            assertEquals("Task", byId.get(ClickUpCustomItem.DEFAULT_TASK_ID).getName());
+        }
+
+        @Test
+        @DisplayName("The types are reused for 10 minutes")
+        void getCustomItemsById_shouldReuseRecentTypes() throws IOException {
+            long[] now = {1_000_000};
+            ClickUpTaskService cachingService = new ClickUpTaskService(apiClient, () -> now[0]);
+            when(apiClient.fetchCustomItems(TEST_WORKSPACE_ID)).thenReturn(List.of());
+
+            cachingService.getCustomItemsById(TEST_WORKSPACE_ID);
+            now[0] += ClickUpTaskService.CUSTOM_ITEMS_CACHE_MILLIS - 1;
+            cachingService.getCustomItemsById(TEST_WORKSPACE_ID);
+            verify(apiClient, times(1)).fetchCustomItems(TEST_WORKSPACE_ID);
+
+            now[0] += 1;
+            cachingService.getCustomItemsById(TEST_WORKSPACE_ID);
+            verify(apiClient, times(2)).fetchCustomItems(TEST_WORKSPACE_ID);
         }
     }
 

@@ -16,6 +16,15 @@
 package de.jaimerojas.clickup.model;
 
 public class ClickUpCustomItem {
+    /**
+     * ClickUp's built-in task type: custom item ID 0, never in the workspace's custom items list.
+     */
+    public static final String DEFAULT_TASK_ID = "0";
+
+    public static ClickUpCustomItem defaultTask() {
+        return new ClickUpCustomItem(DEFAULT_TASK_ID, "Task", "Tasks", "Default ClickUp task type", null);
+    }
+
     private String id;
     private String name;
     private String name_plural;
