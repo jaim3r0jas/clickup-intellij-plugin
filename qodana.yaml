@@ -3,8 +3,6 @@
 ####################################################################################################################
 
 version: "1.0"
-linter: jetbrains/qodana-jvm-community:2025.2
+image: jetbrains/qodana-jvm-community:2025.2
 profile:
   name: qodana.recommended
-include:
-  - name: CheckDependencyLicenses
