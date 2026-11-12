@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -135,7 +136,28 @@ class ClickUpRepositoryTest {
             // Assert
             assertNotNull(result, "Task should not be null");
             assertNull(((ClickUpTask) result).getCustomItem());
-            verify(taskService, never()).getCustomItem(anyString(), anyString());
+            verify(taskService, never()).getCustomItem(any(), any());
+        }
+
+        @Test
+        @DisplayName("Should keep the task when its custom item can't be fetched")
+        void findTask_shouldKeepTaskWhenCustomItemFails() throws IOException {
+            // Arrange
+            ClickUpTask expectedTask = new ClickUpTask();
+            expectedTask.setId(TEST_TASK_ID);
+            expectedTask.setCustom_item_id("1001");
+
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
+                    .thenReturn(expectedTask);
+            when(taskService.getCustomItem(TEST_WORKSPACE_ID, "1001"))
+                    .thenThrow(new IOException("Custom item not found: 1001"));
+
+            // Act
+            Task result = repository.findTask(TEST_TASK_ID);
+
+            // Assert
+            assertSame(expectedTask, result, "Task should be returned without its custom item");
+            assertNull(expectedTask.getCustomItem());
         }
 
         @Test
