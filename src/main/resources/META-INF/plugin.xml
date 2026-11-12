@@ -25,6 +25,9 @@
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.tasks</depends>
+    <!-- From 2026.3 on, the core Tasks API (Task, TaskRepository, TaskRepositoryType) is the bundled plugin com.intellij.platform.tasks.
+         Older IDEs don't have it and skip this optional dependency. -->
+    <depends optional="true" config-file="clickup-platform-tasks.xml">com.intellij.platform.tasks</depends>
     <actions>
         <!-- Add your actions here -->
     </actions>
