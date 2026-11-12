@@ -16,6 +16,7 @@
 package de.jaimerojas.clickup.model;
 
 import com.intellij.openapi.util.NlsSafe;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.Comment;
 import com.intellij.tasks.Task;
 import com.intellij.tasks.TaskRepository;
@@ -27,6 +28,7 @@ import org.jetbrains.annotations.Nullable;
 
 import javax.swing.*;
 import java.util.Date;
+import java.util.Locale;
 
 import static de.jaimerojas.clickup.model.ClickUpTaskIconHolder.CLICKUP_ICON;
 
@@ -47,7 +49,7 @@ public class ClickUpTask extends Task {
 
     @Override
     public @Nls @NotNull String getSummary() {
-        return name;
+        return StringUtil.notNullize(name);
     }
 
     @Override
@@ -62,8 +64,8 @@ public class ClickUpTask extends Task {
 
     @Override
     public @NotNull TaskType getType() {
-        if (customItem != null) {
-            var customTaskType = customItem.getName().toLowerCase();
+        if (customItem != null && customItem.getName() != null) {
+            var customTaskType = customItem.getName().toLowerCase(Locale.ROOT);
             if (customTaskType.matches("(bug|bugs|issue|issues|defect|defects)")) {
                 return TaskType.BUG;
             } else if (customTaskType.matches("(task|tasks|story|stories|user story|user stories|feature|features)")) {
@@ -80,17 +82,37 @@ public class ClickUpTask extends Task {
 
     @Override
     public @Nullable Date getUpdated() {
-        return new Date(Long.parseLong(date_updated));
+        return toDate(date_updated);
     }
 
     @Override
     public @Nullable Date getCreated() {
-        return new Date(Long.parseLong(date_created));
+        return toDate(date_created);
     }
 
+    // ClickUp sends dates as epoch milliseconds in a string; a missing or malformed one is no date, not an error
+    private static @Nullable Date toDate(@Nullable String epochMillis) {
+        try {
+            return epochMillis == null ? null : new Date(Long.parseLong(epochMillis.trim()));
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /**
+     * Never null, as the Tasks API requires. The repository never hands a task without an ID to the IDE (see
+     * {@link #hasId()}); this only keeps a stray one from failing the IDE's @NotNull check (#55).
+     */
     @Override
     public @NotNull String getId() {
-        return id;
+        return StringUtil.notNullize(id);
+    }
+
+    /**
+     * Whether ClickUp sent an ID: a task without one (an error body, #55) is no task.
+     */
+    public boolean hasId() {
+        return StringUtil.isNotEmpty(id);
     }
 
     @Override
@@ -102,7 +124,7 @@ public class ClickUpTask extends Task {
                 return custom_id;
             }
         }
-        return id != null ? id : "";
+        return getId();
     }
 
     public void setId(String id) {

@@ -119,8 +119,7 @@ public class ConventionalCommitPlaceHolderProvider implements CommitPlaceholderP
         TaskType taskType = task.getType();
         return switch (taskType) {
             case FEATURE -> "feat";
-            case BUG -> "fix";
-            case EXCEPTION -> "fix";
+            case BUG, EXCEPTION -> "fix";
             case OTHER -> "chore";
         };
     }

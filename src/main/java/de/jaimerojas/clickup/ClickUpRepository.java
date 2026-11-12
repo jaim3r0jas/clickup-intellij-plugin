@@ -155,7 +155,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     public Task findTask(@NotNull String taskId) {
         try {
             ClickUpTask task = getTaskService().getTask(taskId, useCustomTaskIds, selectedWorkspaceId);
-            if (task == null) {
+            // no task, or one without an ID (an error body): the IDE would copy the empty ID into its local task (#55)
+            if (task == null || !task.hasId()) {
                 return null;
             }
 
@@ -184,6 +185,8 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
                     useCustomTaskIds
             );
 
+            // a task without an ID is no task (#55)
+            tasks = tasks.stream().filter(ClickUpTask::hasId).toList();
             // set repo to each task - necessary to enable status update on open task dialog
             tasks.forEach(task -> {
                 task.setRepository(this);

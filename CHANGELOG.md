@@ -17,5 +17,6 @@
 - Workspaces always empty, and the Test button passing with any API token: every ClickUp call now checks the
   answer, a rejected token shows as such in the settings, and a new token takes effect right away
   ([#56](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/56)).
-- A task ClickUp can't find (deleted, or opened before a switch to custom task IDs) no longer comes back as an
-  empty task ([#55](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/55)).
+- "ClickUpTask.getId must not return null" on commit or when switching tasks: a task ClickUp can't find (deleted, or
+  opened before a switch to custom task IDs) no longer comes back as an empty task, and a task with missing fields no
+  longer fails the IDE ([#55](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/55)).
