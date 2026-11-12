@@ -28,3 +28,114 @@
 - "ClickUpTask.getId must not return null" on commit or when switching tasks: a task ClickUp can't find (deleted, or
   opened before a switch to custom task IDs) no longer comes back as an empty task, and a task with missing fields no
   longer fails the IDE ([#55](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/55)).
+
+## [0.3.6] - 2025-12-11
+
+### Fixed
+
+- The plugin works again on the latest PhpStorm
+  ([#63](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/63)).
+
+## [0.3.5] - 2025-11-24
+
+### Changed
+
+- Build and test tooling only, nothing changes for users.
+
+## [0.3.4] - 2025-11-24
+
+### Changed
+
+- More reliable checks of the ClickUp connection and of the server settings.
+
+## [0.3.3] - 2025-11-16
+
+### Fixed
+
+- The ClickUp icon of the task server.
+
+## [0.3.2] - 2025-11-16
+
+### Changed
+
+- Maintenance release.
+
+## [0.3.1] - 2025-11-15
+
+### Changed
+
+- A task without a custom task type counts as a feature.
+
+## [0.3.0] - 2025-11-15
+
+### Added
+
+- Custom task IDs: the "Use Custom Task IDs" option shows and finds tasks by your workspace's IDs (like `DEV-123`).
+
+## [0.2.3] - 2025-05-17
+
+### Changed
+
+- Maintenance release.
+
+## [0.2.2] - 2025-05-04
+
+### Added
+
+- Support for the 2025.2 IDEs ([#44](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/44)).
+
+## [0.2.1] - 2025-04-09
+
+### Fixed
+
+- The server settings didn't show the server URL, and the dropdowns didn't refresh
+  ([#40](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/40)).
+
+## [0.2.0] - 2025-04-09
+
+### Changed
+
+- Simpler server settings: the tasks of the whole workspace, without picking a space and a list.
+
+## [0.1.4] - 2025-04-08
+
+### Fixed
+
+- The statuses offered for a task are read from the task itself.
+
+## [0.1.3] - 2025-04-08
+
+### Fixed
+
+- The statuses offered for a task are those of its own space, not of the space picked in the settings.
+
+## [0.1.2] - 2025-04-08
+
+### Changed
+
+- ClickUp requests need only the workspace.
+
+## [0.1.1] - 2025-04-08
+
+### Changed
+
+- Documentation.
+
+## [0.1.0] - 2025-04-07
+
+### Added
+
+- An assignee filter in the server settings.
+- More than 100 tasks, fetched page by page.
+
+## [0.0.9] - 2025-04-07
+
+### Added
+
+- The ClickUp icon.
+- The Test button is enabled as soon as a token is set.
+- The server settings are kept across IDE restarts.
+
+### Fixed
+
+- Compatibility with IntelliJ IDEA 2025.1.

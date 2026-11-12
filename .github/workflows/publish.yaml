@@ -104,6 +104,13 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
+      # The release notes are CHANGELOG.md's [Unreleased] section, the same text the Marketplace shows. Made before
+      # publishing: a failure here stops the release before anything is live.
+      - name: Release notes from the changelog
+        run: mkdir -p build && ./gradlew getChangelog --unreleased --no-header --no-links --console=plain -q > build/release-notes.md
+        env:
+          PLUGIN_VERSION: ${{ github.ref_name }}
+
       - name: Build and publish plugin
         run: ./gradlew patchPluginXml publishPlugin
         env:
@@ -116,7 +123,51 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          body_path: build/release-notes.md
           generate_release_notes: true
           files: build/distributions/*.zip
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  changelog:
+    name: Changelog pull request
+    runs-on: ubuntu-latest
+    needs: publish
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      # the released commit, not main's head: notes merged after the tag stay in [Unreleased]
+      - name: Checkout the released commit
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Setup Java
+        uses: actions/setup-java@v6
+        with:
+          java-version: '21'
+          distribution: 'jetbrains'
+          cache: 'gradle'
+
+      # [Unreleased] becomes [<version>] - <date>, with a new empty [Unreleased] above it
+      - name: Patch the changelog
+        run: chmod +x gradlew && ./gradlew patchChangelog
+        env:
+          PLUGIN_VERSION: ${{ github.ref_name }}
+
+      - name: Open the pull request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ github.ref_name }}
+        run: |
+          # safe to re-run: the branch is rebuilt and an existing pull request is kept
+          BRANCH="chore/changelog-$VERSION"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$BRANCH"
+          git commit -am "docs(changelog): release $VERSION" || { echo "CHANGELOG.md unchanged"; exit 0; }
+          git push --force --set-upstream origin "$BRANCH"
+          gh pr view "$BRANCH" > /dev/null 2>&1 || gh pr create --base main --head "$BRANCH" \
+            --title "docs(changelog): release $VERSION" \
+            --body "Moves the [Unreleased] notes in \`CHANGELOG.md\` under $VERSION, which was just published."

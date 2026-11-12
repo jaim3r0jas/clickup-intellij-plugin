@@ -4,23 +4,52 @@
     <vendor email="jaimitorojas@gmail.com">Jaime Rojas</vendor>
 
     <description><![CDATA[
-    <h2>ClickUp Integration for IntelliJ Platform</h2>
     <p>
-    Enhance your productivity by integrating ClickUp with JetBrains IDEs. Manage your tasks seamlessly and track
-    time spent on each task within your development environment.
+    Work on your <a href="https://clickup.com">ClickUp</a> tasks without leaving the IDE. ClickUp Integration adds
+    ClickUp as a task server to the IDE's tasks support: open a ClickUp task, and the IDE switches your branch,
+    changelist and editor context to it, keeps its status in ClickUp up to date and fills your commit message.
+    </p>
+
     <h3>Features</h3>
     <ul>
-        <li>Fetches issues from ClickUp spaces to use as tasks.</li>
-        <li>Updates your tasks status from the IDE.</li>
-        <li>Time Tracking for Ultimate users with access to the time tracking bundle.</li>
+        <li><b>Your ClickUp tasks in the IDE.</b> <i>Tools | Tasks &amp; Contexts | Open Task</i> lists the tasks of your workspace,
+            assigned to you or to anyone, most recently updated first. Closed tasks on request.</li>
+        <li><b>Status updates.</b> Move a task to any status of its ClickUp space when you open or finish it.</li>
+        <li><b>Branches and context.</b> A branch and a changelist per task, and your editor tabs and breakpoints
+            restored when you switch back.</li>
+        <li><b>Commit messages from the task.</b> Placeholders for the task's ID, number, summary, project and
+            type, plus <a href="https://www.conventionalcommits.org/">Conventional Commits</a> ones
+            (<code>${type}</code>, <code>${scope}</code>, <code>${description}</code>, <code>${body}</code>,
+            <code>${footer}</code>, <code>${breaking}</code>): a ClickUp Bug becomes <code>fix</code>, a Task or
+            Feature <code>feat</code>.</li>
+        <li><b>Custom task IDs.</b> Use your workspace's custom IDs (like <code>DEV-123</code>) instead of ClickUp's
+            internal ones.</li>
+        <li><b>Time tracking.</b> Log the time you spent on a task to ClickUp.</li>
+    </ul>
+
+    <h3>Getting started</h3>
+    <ol>
+        <li>Open <i>Settings | Tools | Tasks | Servers</i>, click <b>+</b> and choose <b>ClickUp</b>.</li>
+        <li>Paste your personal ClickUp API token. <b>Generate token</b> opens the page in ClickUp where you create
+            it (<i>Settings | Apps</i>).</li>
+        <li>Pick your workspace and, optionally, an assignee, then click <b>Test</b>.</li>
+        <li>Open a task with <i>Tools | Tasks &amp; Contexts | Open Task</i>.</li>
+    </ol>
+
+    <h3>Compatibility</h3>
+    <ul>
+        <li>Every IntelliJ-based IDE from 2024.3 on: IntelliJ IDEA, PhpStorm, WebStorm, PyCharm, GoLand, Rider and
+            the others.</li>
+        <li>From 2026.3 on, the IDE's tasks support comes from the JetBrains <b>Issue Trackers</b> plugin, which is
+            installed along with this one when your IDE doesn't bundle it.</li>
+        <li>Time tracking needs the IDE's time tracking feature: IntelliJ IDEA Ultimate up to 2025.3, the
+            JetBrains <b>Time Tracking</b> plugin from 2026.3 on.</li>
     </ul>
 
     <p>
-    For now the plugin has limited functionality, but it is a work in progress. This plugin is an open source
-    project, and is not officially supported by ClickUp, so contributions and feedback are equally welcome.
+    Open source, Apache 2.0: <a href="https://github.com/jaim3r0jas/clickup-intellij-plugin">source and issues on
+    GitHub</a>. Not affiliated with or supported by ClickUp; the ClickUp logo is a trademark of ClickUp.
     </p>
-
-    <p>The logo is a registered trademark of ClickUp. </p>
 ]]></description>
 
     <depends>com.intellij.modules.platform</depends>
@@ -28,20 +57,10 @@
     <!-- From 2026.3 on, the core Tasks API (Task, TaskRepository, TaskRepositoryType) is the bundled plugin com.intellij.platform.tasks.
          Older IDEs don't have it and skip this optional dependency. -->
     <depends optional="true" config-file="clickup-platform-tasks.xml">com.intellij.platform.tasks</depends>
-    <actions>
-        <!-- Add your actions here -->
-    </actions>
     <extensions defaultExtensionNs="com.intellij">
         <tasks.repositoryType implementation="de.jaimerojas.clickup.ClickUpRepositoryType"/>
         <tasks.commitPlaceholderProvider implementation="de.jaimerojas.clickup.extensions.ConventionalCommitPlaceHolderProvider"/>
     </extensions>
 
-    <change-notes><![CDATA[
-    <ul>
-      <li>
-        Explore the detailed release notes:
-        <a href="https://github.com/jaim3r0jas/clickup-intellij-plugin/releases">ClickUp Integration Plugin Releases</a>
-        </li>
-    </ul>
-    ]]></change-notes>
+    <!-- <change-notes>: patchPluginXml renders them from CHANGELOG.md ([Unreleased], or the released version) -->
 </idea-plugin>

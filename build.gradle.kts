@@ -64,6 +64,14 @@ dependencies {
     testImplementation(libs.mockito.junit.jupiter)
 }
 
+// CHANGELOG.md: its [Unreleased] section becomes the plugin's change notes on the Marketplace, and the publish
+// workflow turns it into the released version's section (patchChangelog) in a pull request after each release.
+changelog {
+    groups = listOf("Added", "Changed", "Fixed", "Removed")
+    repositoryUrl = "https://github.com/jaim3r0jas/clickup-intellij-plugin"
+    versionPrefix = "" // release tags are 0.4.0, not v0.4.0
+}
+
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {

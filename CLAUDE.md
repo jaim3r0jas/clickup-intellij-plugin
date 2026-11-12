@@ -7,7 +7,8 @@ JetBrains Marketplace as plugin 26944.
 
 What users see: [README.md](README.md). How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). Feature and pipeline
 write-ups: [docs/](docs/) (CI in detail: [docs/WORKFLOWS.md](docs/WORKFLOWS.md); commit placeholders:
-[docs/CONVENTIONAL_COMMITS.md](docs/CONVENTIONAL_COMMITS.md)).
+[docs/CONVENTIONAL_COMMITS.md](docs/CONVENTIONAL_COMMITS.md); the Marketplace page and releasing:
+[docs/MARKETPLACE.md](docs/MARKETPLACE.md)).
 
 ## Layout
 
@@ -90,8 +91,11 @@ write-ups: [docs/](docs/) (CI in detail: [docs/WORKFLOWS.md](docs/WORKFLOWS.md);
   3. a coverage comment on the PR and a Codecov upload (targets in `codecov.yml`)
   4. then the Qodana scan
 - `.github/workflows/publish.yaml` runs on a tag `X.Y.Z` that is on `main`: tests with a blocking `koverVerify`,
-  Qodana, then signs the plugin, publishes it to the Marketplace and creates the GitHub release. Pushing a tag
-  releases: only when the user asks.
+  Qodana, then signs the plugin, publishes it to the Marketplace, creates the GitHub release with `CHANGELOG.md`'s
+  `[Unreleased]` notes and opens a pull request that moves them under the version. Pushing a tag releases: only
+  when the user asks.
+- A user-visible change adds a line to `CHANGELOG.md` under `[Unreleased]` (Added, Changed, Fixed, Removed): it
+  becomes the Marketplace's change notes.
 
 ## Secrets
 
