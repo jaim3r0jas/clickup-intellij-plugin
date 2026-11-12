@@ -134,12 +134,14 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     public Task findTask(@NotNull String taskId) {
         try {
             ClickUpTask task = getTaskService().getTask(taskId, useCustomTaskIds, selectedWorkspaceId);
-            ClickUpCustomItem customItem = getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id());
-            task.setCustomItem(customItem);
-
-            if (task != null) {
-                task.setRepository(this);
+            if (task == null) {
+                return null;
             }
+
+            if (task.getCustom_item_id() != null) {
+                task.setCustomItem(getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id()));
+            }
+            task.setRepository(this);
             return task;
         } catch (IOException e) {
             LOG.error("Error fetching task with ID: " + taskId, e);
