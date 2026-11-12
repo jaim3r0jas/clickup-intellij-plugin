@@ -2,6 +2,9 @@ import org.jetbrains.intellij.platform.gradle.IntelliJPlatformType
 
 plugins {
     id("java") // Java support
+    // No Kotlin sources, but Kover only attaches its coverage agent to the tests when the Kotlin JVM plugin is applied:
+    // without it the coverage report is empty and koverVerify passes on nothing.
+    alias(libs.plugins.kotlin)
     alias(libs.plugins.intelliJPlatform) // IntelliJ Platform Gradle Plugin
     alias(libs.plugins.changelog) // Gradle Changelog Plugin
     alias(libs.plugins.qodana) // Gradle Qodana Plugin

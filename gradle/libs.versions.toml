@@ -7,6 +7,7 @@ mockito = "5.24.0"
 # plugins
 changelog = "2.5.0"
 intelliJPlatform = "2.20.1"
+kotlin = "2.4.21"
 kover = "0.9.11"
 qodana = "2026.2.2"
 
@@ -21,5 +22,6 @@ mockito-junit-jupiter = { group = "org.mockito", name = "mockito-junit-jupiter",
 [plugins]
 changelog = { id = "org.jetbrains.changelog", version.ref = "changelog" }
 intelliJPlatform = { id = "org.jetbrains.intellij.platform", version.ref = "intelliJPlatform" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 qodana = { id = "org.jetbrains.qodana", version.ref = "qodana" }

@@ -1,8 +1,9 @@
 # ClickUp Integration for JetBrains IDEs
 
 A JetBrains plugin that adds ClickUp as a task server to the IDE's Tasks framework (`com.intellij.tasks`): fetch
-tasks, update their status, log time, and fill commit messages through placeholders. Java only (no Kotlin plugin).
-Published on the JetBrains Marketplace as plugin 26944.
+tasks, update their status, log time, and fill commit messages through placeholders. Java only: the Kotlin Gradle
+plugin is applied only because Kover needs it to measure coverage (without it the report is empty). Published on the
+JetBrains Marketplace as plugin 26944.
 
 What users see: [README.md](README.md). How to contribute: [CONTRIBUTING.md](CONTRIBUTING.md). Feature and pipeline
 write-ups: [docs/](docs/) (CI in detail: [docs/WORKFLOWS.md](docs/WORKFLOWS.md); commit placeholders:
