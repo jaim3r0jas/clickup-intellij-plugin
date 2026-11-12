@@ -58,11 +58,18 @@ The CI/CD pipeline has been streamlined into two lean, efficient workflows that 
 
 #### Job 3: Publish to JetBrains Marketplace
 - ✅ Runs only after tests and quality checks pass
-- ✅ Patches plugin.xml with version from tag
+- ✅ Patches plugin.xml with version from tag, and the change notes from `CHANGELOG.md` (`[Unreleased]`)
 - ✅ Signs the plugin with private key
 - ✅ Publishes to JetBrains Marketplace
-- ✅ Creates GitHub Release with auto-generated notes
+- ✅ Creates GitHub Release with the `[Unreleased]` notes, followed by the auto-generated list of pull requests
 - ✅ Attaches plugin distribution to release
+
+#### Job 4: Changelog pull request
+- ✅ Runs `patchChangelog` on the released commit: `[Unreleased]` becomes `[<version>] - <date>`, with a new empty
+  `[Unreleased]` (notes merged to `main` after the tag stay unreleased)
+- ✅ Opens a pull request `chore/changelog-<version>` to `main` with it, to merge after the release; safe to re-run
+- Needs "Allow GitHub Actions to create and approve pull requests" in the repository settings
+  ([docs/MARKETPLACE.md](MARKETPLACE.md))
 
 **Tag Verification:**
 The publish workflow ensures that only tags based on the `main` branch can trigger a release, preventing accidental releases from feature branches.
