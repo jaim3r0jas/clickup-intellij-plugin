@@ -4,6 +4,16 @@
 
 ### Added
 
+### Changed
+
+### Fixed
+
+### Removed
+
+## [0.4.0] - 2026-11-12
+
+### Added
+
 - A "Generate token" link next to the API token field, which opens the page in ClickUp where you create one
   ([#42](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/42)).
 - Support for the 2026.3 IDEs. From 2026.3 on, the IDE no longer bundles the Tasks API: the plugin needs the
@@ -139,3 +149,23 @@
 ### Fixed
 
 - Compatibility with IntelliJ IDEA 2025.1.
+
+[Unreleased]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.4.0...HEAD
+[0.4.0]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.6...0.4.0
+[0.3.6]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.5...0.3.6
+[0.3.5]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.4...0.3.5
+[0.3.4]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.3...0.3.4
+[0.3.3]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.2...0.3.3
+[0.3.2]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.1...0.3.2
+[0.3.1]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.3.0...0.3.1
+[0.3.0]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.2.3...0.3.0
+[0.2.3]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.2.2...0.2.3
+[0.2.2]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.2.1...0.2.2
+[0.2.1]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.2.0...0.2.1
+[0.2.0]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.1.4...0.2.0
+[0.1.4]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.1.3...0.1.4
+[0.1.3]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.1.2...0.1.3
+[0.1.2]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.1.1...0.1.2
+[0.1.1]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.1.0...0.1.1
+[0.1.0]: https://github.com/jaim3r0jas/clickup-intellij-plugin/compare/0.0.9...0.1.0
+[0.0.9]: https://github.com/jaim3r0jas/clickup-intellij-plugin/commits/0.0.9
