@@ -4,6 +4,8 @@
 
 ### Added
 
+- A "Generate token" link next to the API token field, which opens the page in ClickUp where you create one
+  ([#42](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/42)).
 - Support for the 2026.3 IDEs. From 2026.3 on, the IDE no longer bundles the Tasks API: the plugin needs the
   JetBrains "Issue Trackers" plugin, which the IDE installs along with it.
 

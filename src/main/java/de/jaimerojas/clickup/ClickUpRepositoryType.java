@@ -25,6 +25,11 @@ import javax.swing.*;
 import static de.jaimerojas.clickup.model.ClickUpTaskIconHolder.CLICKUP_ICON;
 
 public class ClickUpRepositoryType extends BaseRepositoryType<ClickUpRepository> {
+    /**
+     * Where ClickUp users generate their personal API token (ClickUp: Settings > Apps).
+     */
+    public static final String API_TOKEN_SETTINGS_URL = "https://app.clickup.com/settings/apps";
+
     @Override
     @NotNull
     public String getName() {
