@@ -69,27 +69,40 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
         return task;
     }
 
+    /**
+     * One page (up to {@link ClickUpApiClient#PAGE_SIZE} tasks) of the workspace's tasks, most recently updated first, so a new or
+     * just-assigned task is on the first page.
+     */
     @Override
-    public @NotNull List<ClickUpTask> fetchTasks(
+    public @NotNull GetTasks fetchTasks(
             @NotNull String workspaceId,
             String assigneeId,
             int page,
-            boolean useCustomTaskIds
+            boolean useCustomTaskIds,
+            boolean includeClosed
     ) throws IOException {
         StringBuilder url = new StringBuilder(BASE_URL)
                 .append("/team/").append(workspaceId)
-                .append("/task?subtasks=true&archived=false");
+                .append("/task?subtasks=true&archived=false&order_by=updated")
+                .append("&page=").append(page);
 
         if (assigneeId != null && !assigneeId.isEmpty()) {
-            url.append("&page=").append(page).append("&assignees[]=").append(assigneeId);
+            url.append("&assignees[]=").append(assigneeId);
         }
 
         if (useCustomTaskIds) {
             url.append("&custom_task_ids=true");
         }
 
+        if (includeClosed) {
+            url.append("&include_closed=true");
+        }
+
         GetTasks getTasks = execute(new HttpGet(url.toString()), GetTasks.class);
-        return getTasks == null || getTasks.getTasks() == null ? List.of() : getTasks.getTasks();
+        if (getTasks == null) {
+            return new GetTasks(List.of(), null);
+        }
+        return new GetTasks(getTasks.getTasks() == null ? List.of() : getTasks.getTasks(), getTasks.getLast_page());
     }
 
     @Override
@@ -114,18 +127,6 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
         return getCustomItems == null || getCustomItems.getCustom_items() == null
                 ? List.of()
                 : getCustomItems.getCustom_items();
-    }
-
-    @Override
-    public @NotNull ClickUpCustomItem fetchCustomItem(@NotNull String customItemId, @NotNull String workspaceId) throws IOException {
-        if (customItemId.equals("0")) {
-            return new ClickUpCustomItem("0", "Task", "Tasks", "Default ClickUp task type", null);
-        }
-
-        return fetchCustomItems(workspaceId).stream()
-                .filter(item -> customItemId.equals(item.getId()))
-                .findFirst()
-                .orElseThrow(() -> new IOException("Custom item not found: " + customItemId));
     }
 
     @Override

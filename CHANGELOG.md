@@ -14,6 +14,12 @@
 
 ### Fixed
 
+- New tasks missing from the task list until the server settings were applied again: a failed refresh no longer
+  makes the IDE stop asking ClickUp or empties the list, the most recently updated tasks come first, paging reaches
+  past the first 100 tasks (up to 500 per request), and the plugin sends far fewer requests (one for the custom task
+  types instead of one per task, and ClickUp pages reused for 30 seconds), which kept running into ClickUp's rate
+  limit ([#66](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/66)).
+- "Include closed" in the task list now shows closed ClickUp tasks.
 - Workspaces always empty, and the Test button passing with any API token: every ClickUp call now checks the
   answer, a rejected token shows as such in the settings, and a new token takes effect right away
   ([#56](https://github.com/jaim3r0jas/clickup-intellij-plugin/issues/56)).

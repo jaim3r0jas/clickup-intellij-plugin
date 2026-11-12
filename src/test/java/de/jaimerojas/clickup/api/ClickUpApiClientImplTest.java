@@ -166,7 +166,7 @@ class ClickUpApiClientImplTest {
         void fetchTasks_shouldReturnEmptyListWhenTasksMissing() throws IOException {
             respond(200, "{}");
 
-            assertEquals(List.of(), client.fetchTasks("ws1", null, 0, false));
+            assertEquals(List.of(), client.fetchTasks("ws1", null, 0, false, false).getTasks());
         }
 
         @Test
@@ -175,6 +175,47 @@ class ClickUpApiClientImplTest {
             respond(200, "");
 
             assertThrows(IOException.class, () -> client.fetchTask("abc123", false, null));
+        }
+
+        @Test
+        @DisplayName("Asks for the page even without an assignee, newest updates first, closed tasks on request (#66)")
+        void fetchTasks_shouldSendPageOrderAndIncludeClosed() throws IOException {
+            respond(200, "{\"tasks\":[]}");
+
+            client.fetchTasks("ws1", null, 2, false, true);
+
+            ArgumentCaptor<HttpUriRequest> request = ArgumentCaptor.forClass(HttpUriRequest.class);
+            verify(httpClient).execute(request.capture(), ArgumentMatchers.<ResponseHandler<Object>>any());
+            String query = request.getValue().getURI().getQuery();
+            assertTrue(query.contains("page=2"), query);
+            assertTrue(query.contains("order_by=updated"), query);
+            assertTrue(query.contains("include_closed=true"), query);
+            assertFalse(query.contains("assignees"), query);
+        }
+
+        @Test
+        @DisplayName("Reads ClickUp's last_page flag")
+        void fetchTasks_shouldReadLastPage() throws IOException {
+            respond(200, "{\"tasks\":[{\"id\":\"t1\"}],\"last_page\":true}");
+
+            de.jaimerojas.clickup.model.GetTasks page = client.fetchTasks("ws1", null, 0, false, false);
+
+            assertEquals(1, page.getTasks().size());
+            assertEquals(Boolean.TRUE, page.getLast_page());
+        }
+
+        @Test
+        @DisplayName("Leaves closed tasks out unless asked")
+        void fetchTasks_shouldLeaveClosedTasksOutByDefault() throws IOException {
+            respond(200, "{\"tasks\":[]}");
+
+            client.fetchTasks("ws1", "user1", 0, false, false);
+
+            ArgumentCaptor<HttpUriRequest> request = ArgumentCaptor.forClass(HttpUriRequest.class);
+            verify(httpClient).execute(request.capture(), ArgumentMatchers.<ResponseHandler<Object>>any());
+            String query = request.getValue().getURI().getQuery();
+            assertFalse(query.contains("include_closed"), query);
+            assertTrue(query.contains("page=0"), query);
         }
 
         @Test

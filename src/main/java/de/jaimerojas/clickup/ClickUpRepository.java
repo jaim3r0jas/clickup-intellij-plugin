@@ -16,6 +16,7 @@
 package de.jaimerojas.clickup;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.CustomTaskState;
 import com.intellij.tasks.LocalTask;
@@ -27,6 +28,8 @@ import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import de.jaimerojas.clickup.api.ClickUpApiClient;
 import de.jaimerojas.clickup.api.ClickUpApiClientImpl;
+import de.jaimerojas.clickup.api.ClickUpApiException;
+import de.jaimerojas.clickup.model.ClickUpCustomItem;
 import de.jaimerojas.clickup.model.ClickUpSpace;
 import de.jaimerojas.clickup.model.ClickUpTask;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
@@ -37,8 +40,10 @@ import org.jetbrains.annotations.Nullable;
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Tag("ClickUp")
 public class ClickUpRepository extends NewBaseRepositoryImpl {
@@ -53,6 +58,10 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     private ClickUpTaskService taskService;
     private String taskServiceToken;
     private boolean taskServiceInjected;
+
+    // The last tasks each task list request got, returned when ClickUp fails (see getIssues). Never persisted.
+    private static final int MAX_REMEMBERED_REQUESTS = 20;
+    private final transient Map<String, ClickUpTask[]> lastIssues = new ConcurrentHashMap<>();
 
     /**
      * Serialization constructor
@@ -99,6 +108,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         if (taskService == null || !token.equals(taskServiceToken)) {
             taskService = createTaskService(token);
             taskServiceToken = token;
+            lastIssues.clear(); // never fall back to tasks another token got
         }
         return taskService;
     }
@@ -161,7 +171,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             }
 
             task.setRepository(this);
-            attachCustomItem(task);
+            attachCustomItem(task, customItemsFor(List.of(task)));
             return task;
         } catch (IOException e) {
             LOG.warn("Error fetching task with ID: " + taskId, e);
@@ -169,45 +179,89 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         return null;
     }
 
+    /**
+     * The IDE's task list. It never throws: the Tasks framework marks a repository whose getIssues throws as bad and
+     * skips it on every refresh until the settings are applied again (#66). It never answers a failure with an empty
+     * list either: the IDE's refresh would replace its cached tasks with nothing. A failure is logged and gives the
+     * last tasks this request got, so the next refresh simply tries again. The IDE filters by {@code query} itself
+     * (no native search).
+     */
     @Override
     public Task[] getIssues(@Nullable String query, int offset, int limit, boolean withClosed) {
-        if (myPassword == null || myPassword.trim().isEmpty())
+        if (StringUtil.isEmptyOrSpaces(myPassword) || StringUtil.isEmptyOrSpaces(selectedWorkspaceId)) {
             return new Task[0];
+        }
 
-        LOG.debug("getIssues called with offset: " + offset);
-        LOG.debug("getIssues called with limit: " + limit);
+        LOG.debug("getIssues called with offset " + offset + ", limit " + limit + ", withClosed " + withClosed);
+        String request = String.join("|", selectedWorkspaceId, String.valueOf(selectedAssigneeId),
+                String.valueOf(useCustomTaskIds), String.valueOf(offset), String.valueOf(limit), String.valueOf(withClosed));
 
         try {
             List<ClickUpTask> tasks = getTaskService().getTasks(
                     selectedWorkspaceId,
                     selectedAssigneeId,
                     offset,
-                    useCustomTaskIds
+                    limit,
+                    useCustomTaskIds,
+                    withClosed
             );
 
-            // a task without an ID is no task (#55)
-            tasks = tasks.stream().filter(ClickUpTask::hasId).toList();
+            Map<String, ClickUpCustomItem> customItems = customItemsFor(tasks);
             // set repo to each task - necessary to enable status update on open task dialog
             tasks.forEach(task -> {
                 task.setRepository(this);
-                attachCustomItem(task);
+                attachCustomItem(task, customItems);
             });
-            return tasks.toArray(new ClickUpTask[0]);
-        } catch (IOException e) {
+            ClickUpTask[] issues = tasks.toArray(new ClickUpTask[0]);
+            if (lastIssues.size() >= MAX_REMEMBERED_REQUESTS) {
+                lastIssues.clear();
+            }
+            lastIssues.put(request, issues);
+            return issues;
+        } catch (ProcessCanceledException e) {
+            throw e; // the IDE cancelled the request: not a failure
+        } catch (ClickUpApiException e) {
+            LOG.warn("Error fetching tasks with query: " + query, e);
+            if (e.isAuthenticationError()) {
+                // a revoked or rejected token: showing old tasks would hide it
+                lastIssues.clear();
+                return new Task[0];
+            }
+        } catch (IOException | RuntimeException e) {
             LOG.warn("Error fetching tasks with query: " + query, e);
         }
-        return new Task[0];
+        return lastIssues.getOrDefault(request, new ClickUpTask[0]);
+    }
+
+    /**
+     * The custom task types these tasks need, by ID: none requested when every task has the default type, else the
+     * workspace's types (one request, cached by the service). Types that can't be fetched are left out: those tasks
+     * keep the default type.
+     */
+    private @NotNull Map<String, ClickUpCustomItem> customItemsFor(@NotNull List<ClickUpTask> tasks) {
+        boolean needsCustomTypes = tasks.stream()
+                .map(ClickUpTask::getCustom_item_id)
+                .anyMatch(id -> id != null && !ClickUpCustomItem.DEFAULT_TASK_ID.equals(id));
+        if (!needsCustomTypes) {
+            return Map.of(ClickUpCustomItem.DEFAULT_TASK_ID, ClickUpCustomItem.defaultTask());
+        }
+        try {
+            return getTaskService().getCustomItemsById(selectedWorkspaceId);
+        } catch (ProcessCanceledException e) {
+            throw e;
+        } catch (IOException | RuntimeException e) {
+            LOG.warn("Error fetching custom task types of workspace " + selectedWorkspaceId, e);
+            return Map.of(ClickUpCustomItem.DEFAULT_TASK_ID, ClickUpCustomItem.defaultTask());
+        }
     }
 
     // a task without a custom item ID, or whose custom item can't be fetched, keeps the default task type
-    private void attachCustomItem(@NotNull ClickUpTask task) {
-        if (task.getCustom_item_id() == null) {
-            return;
-        }
-        try {
-            task.setCustomItem(getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id()));
-        } catch (IOException e) {
-            LOG.warn("Error fetching custom item for task ID: " + task.getId(), e);
+    private static void attachCustomItem(@NotNull ClickUpTask task, @NotNull Map<String, ClickUpCustomItem> customItems) {
+        // checked first: immutable maps don't take null keys
+        String customItemId = task.getCustom_item_id();
+        ClickUpCustomItem customItem = customItemId == null ? null : customItems.get(customItemId);
+        if (customItem != null) {
+            task.setCustomItem(customItem);
         }
     }
 

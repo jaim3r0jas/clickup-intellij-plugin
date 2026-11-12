@@ -39,21 +39,28 @@ public interface ClickUpApiClient {
     ClickUpTask fetchTask(@NotNull String taskId, boolean useCustomTaskIds, String workspaceId) throws IOException;
 
     /**
-     * Fetches tasks from a workspace.
+     * ClickUp returns at most this many tasks per page.
+     */
+    int PAGE_SIZE = 100;
+
+    /**
+     * Fetches one page of a workspace's tasks, most recently updated first.
      *
-     * @param workspaceId The workspace ID
-     * @param assigneeId Optional assignee ID to filter by
-     * @param page The page number for pagination
+     * @param workspaceId      The workspace ID
+     * @param assigneeId       Optional assignee ID to filter by
+     * @param page             The page number, from 0
      * @param useCustomTaskIds Whether to use custom task IDs
-     * @return List of tasks
+     * @param includeClosed    Whether to include closed tasks
+     * @return The page: its task list is never null, its last-page flag is ClickUp's (null when absent)
      * @throws IOException if the request fails
      */
     @NotNull
-    List<ClickUpTask> fetchTasks(
+    GetTasks fetchTasks(
             @NotNull String workspaceId,
             String assigneeId,
             int page,
-            boolean useCustomTaskIds
+            boolean useCustomTaskIds,
+            boolean includeClosed
     ) throws IOException;
 
     /**
@@ -84,17 +91,6 @@ public interface ClickUpApiClient {
      */
     @NotNull
     List<ClickUpCustomItem> fetchCustomItems(@NotNull String workspaceId) throws IOException;
-
-    /**
-     * Fetches a custom item by ID.
-     *
-     * @param customItemId The custom item ID
-     * @param workspaceId The workspace ID
-     * @return The custom item
-     * @throws IOException if the request fails
-     */
-    @NotNull
-    ClickUpCustomItem fetchCustomItem(@NotNull String customItemId, @NotNull String workspaceId) throws IOException;
 
     /**
      * Tracks time spent on a task.
