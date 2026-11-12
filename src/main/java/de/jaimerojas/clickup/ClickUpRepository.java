@@ -16,6 +16,7 @@
 package de.jaimerojas.clickup;
 
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.CustomTaskState;
 import com.intellij.tasks.LocalTask;
 import com.intellij.tasks.Task;
@@ -47,8 +48,11 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     private String selectedAssigneeId;
     private boolean useCustomTaskIds = false;
 
-    // Service layer for business logic - can be injected for testing
+    // Service layer for business logic. Built from the current API token, and rebuilt when the token changes; a
+    // service injected for testing is kept as it is.
     private ClickUpTaskService taskService;
+    private String taskServiceToken;
+    private boolean taskServiceInjected;
 
     /**
      * Serialization constructor
@@ -68,7 +72,10 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
         setSelectedWorkspaceId(other.getSelectedWorkspaceId());
         setSelectedAssigneeId(other.getSelectedAssigneeId());
         setUseCustomTaskIds(other.isUseCustomTaskIds());
-        this.taskService = other.taskService;
+        // a copy builds its own service from its own token: sharing it would keep using the token of the original
+        if (other.taskServiceInjected) {
+            setTaskService(other.taskService);
+        }
     }
 
     /**
@@ -76,27 +83,42 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
      */
     public ClickUpRepository(TaskRepositoryType type, ClickUpTaskService taskService) {
         super(type);
-        this.taskService = taskService;
+        setTaskService(taskService);
     }
 
     /**
-     * Gets or creates the task service.
-     * Lazily initializes the service with the API client.
+     * Gets the task service, built with the current API token. A changed token (a new one typed in the settings)
+     * gets a new service, so the old token is never used again.
      */
     @NotNull
-    protected ClickUpTaskService getTaskService() {
-        if (taskService == null) {
-            ClickUpApiClient apiClient = new ClickUpApiClientImpl(getHttpClient(), myPassword);
-            taskService = new ClickUpTaskService(apiClient);
+    protected synchronized ClickUpTaskService getTaskService() {
+        if (taskServiceInjected) {
+            return taskService;
+        }
+        String token = StringUtil.notNullize(myPassword);
+        if (taskService == null || !token.equals(taskServiceToken)) {
+            taskService = createTaskService(token);
+            taskServiceToken = token;
         }
         return taskService;
     }
 
     /**
-     * For testing - allows setting a custom task service
+     * Builds the service for an API token. Overridden in tests.
      */
-    void setTaskService(ClickUpTaskService taskService) {
+    @NotNull
+    protected ClickUpTaskService createTaskService(@NotNull String apiToken) {
+        ClickUpApiClient apiClient = new ClickUpApiClientImpl(getHttpClient(), apiToken);
+        return new ClickUpTaskService(apiClient);
+    }
+
+    /**
+     * For testing - sets a service that is used whatever the token; null goes back to building it from the token.
+     */
+    synchronized void setTaskService(@Nullable ClickUpTaskService taskService) {
         this.taskService = taskService;
+        this.taskServiceInjected = taskService != null;
+        this.taskServiceToken = null;
     }
 
     @Override
@@ -141,7 +163,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             attachCustomItem(task);
             return task;
         } catch (IOException e) {
-            LOG.error("Error fetching task with ID: " + taskId, e);
+            LOG.warn("Error fetching task with ID: " + taskId, e);
         }
         return null;
     }
@@ -169,7 +191,7 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             });
             return tasks.toArray(new ClickUpTask[0]);
         } catch (IOException e) {
-            LOG.error("Error fetching tasks with query: " + query, e);
+            LOG.warn("Error fetching tasks with query: " + query, e);
         }
         return new Task[0];
     }
@@ -190,50 +212,56 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     @Override
     public void updateTimeSpent(@NotNull LocalTask task, @NotNull String timeSpent, @NotNull String comment) throws Exception {
         String taskId = task.getId();
-        LOG.warn("Updating time spent for task ID: " + taskId);
+        LOG.debug("Updating time spent for task ID: " + taskId);
         try {
             getTaskService().updateTimeSpent(taskId, timeSpent, selectedWorkspaceId, useCustomTaskIds);
-            LOG.warn("Time spent updated for task ID: " + taskId);
+            LOG.debug("Time spent updated for task ID: " + taskId);
         } catch (IOException e) {
-            LOG.error("Error updating time spent for task ID: " + taskId, e);
-            throw new Exception("Failed to update time spent", e);
+            LOG.warn("Error updating time spent for task ID: " + taskId, e);
+            throw new Exception(ClickUpBundle.message("error.clickup.time.spent.failed", e.getMessage()), e);
         }
     }
 
     @Override
     public void setTaskState(@NotNull Task task, @NotNull CustomTaskState state) throws Exception {
         String taskId = task.getId();
-        LOG.warn("Updating task state for task ID: " + taskId);
+        LOG.debug("Updating task state for task ID: " + taskId);
         try {
             getTaskService().updateTaskStatus(taskId, state.getPresentableName(), selectedWorkspaceId, useCustomTaskIds);
         } catch (IOException e) {
-            LOG.debug("Error updating task state for task ID: " + taskId, e);
-            throw new Exception("Failed to update task state", e);
+            LOG.warn("Error updating task state for task ID: " + taskId, e);
+            throw new Exception(ClickUpBundle.message("error.clickup.task.state.failed", e.getMessage()), e);
         }
     }
 
     @Override
     public @NotNull Set<CustomTaskState> getAvailableTaskStates(@NotNull Task task) throws Exception {
         Set<CustomTaskState> taskStatuses = new HashSet<>();
-        LOG.warn("Fetching available task states for task ID: " + task.getId());
+        LOG.debug("Fetching available task states for task ID: " + task.getId());
 
         try {
             ClickUpTask clickUpTask = getTaskService().getTask(task.getId(), useCustomTaskIds, selectedWorkspaceId);
-            String spaceId = clickUpTask.getSpace().getId();
-            ClickUpSpace space = getTaskService().getSpace(spaceId);
+            if (clickUpTask == null || clickUpTask.getSpace() == null || clickUpTask.getSpace().getId() == null) {
+                LOG.warn("No space for task ID " + task.getId() + ": no task states to offer");
+                return taskStatuses;
+            }
+            ClickUpSpace space = getTaskService().getSpace(clickUpTask.getSpace().getId());
+            if (space.getStatuses() == null) {
+                return taskStatuses;
+            }
 
             space.getStatuses().forEach(state ->
                     taskStatuses.add(new CustomTaskState(state.getId(), state.getStatus())));
 
-            LOG.warn("Available task states: " + taskStatuses.stream()
+            LOG.debug("Available task states: " + taskStatuses.stream()
                     .map(CustomTaskState::getPresentableName)
                     .reduce((a, b) -> a + ", " + b)
                     .orElse(""));
 
             return taskStatuses;
         } catch (IOException e) {
-            LOG.error("Error fetching task states for task ID: " + task.getId(), e);
-            throw new Exception("Failed to fetch task states", e);
+            LOG.warn("Error fetching task states for task ID: " + task.getId(), e);
+            throw new Exception(ClickUpBundle.message("error.clickup.task.states.failed", e.getMessage()), e);
         }
     }
 
@@ -282,10 +310,6 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
 
     public void setUseCustomTaskIds(boolean selected) {
         this.useCustomTaskIds = selected;
-    }
-
-    public void getHttpClientForTest() {
-        getHttpClient();
     }
 
     public List<ClickUpWorkspace> fetchWorkspaces() throws IOException {

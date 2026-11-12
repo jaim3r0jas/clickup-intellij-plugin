@@ -15,32 +15,47 @@
  */
 package de.jaimerojas.clickup;
 
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ModalityState;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.ComboBox;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.tasks.config.BaseRepositoryEditor;
+import com.intellij.ui.JBColor;
 import com.intellij.ui.components.JBLabel;
 import com.intellij.ui.components.JBPasswordField;
 import com.intellij.util.Consumer;
 import com.intellij.util.ui.FormBuilder;
+import de.jaimerojas.clickup.api.ClickUpApiException;
 import de.jaimerojas.clickup.model.ClickUpTeamMember;
 import de.jaimerojas.clickup.model.ClickUpUser;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
+import org.jetbrains.annotations.NotNull;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.io.IOException;
+import java.util.List;
+import java.util.Objects;
 
 public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpRepository> {
     private static final Logger LOG = Logger.getInstance(ClickUpRepositoryEditor.class);
+    private static final String NO_SELECTION_ID = "-1";
 
     private JBPasswordField myApiTokenField;
+    private JBLabel myErrorLabel;
     private ComboBox<ClickUpWorkspace> myWorkspaceDropdown;
     private ComboBox<ClickUpUser> myAssigneeDropdown;
     private JCheckBox myUseCustomTaskIdsCheckBox;
+
+    // No field initializers below: BaseRepositoryEditor's constructor calls createCustomPanel() before they would run.
+    // Each load from ClickUp gets a number; a slower, older load that finishes later is dropped (EDT only).
+    private int myLoadGeneration;
+    // the token the dropdowns were last loaded for, and whether that load succeeded
+    private String myLoadedToken;
+    private boolean myWorkspacesLoaded;
 
     public ClickUpRepositoryEditor(
             Project project,
@@ -73,6 +88,10 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         JPanel myApiTokenPanel = new JPanel(new BorderLayout(5, 0));
         myApiTokenPanel.add(myApiTokenField, BorderLayout.CENTER);
 
+        myErrorLabel = new JBLabel();
+        myErrorLabel.setForeground(JBColor.RED);
+        myErrorLabel.setVisible(false);
+
         myWorkspaceDropdown = new ComboBox<>();
         JPanel myWorkspacePanel = new JPanel(new BorderLayout(5, 0));
         myWorkspacePanel.add(myWorkspaceDropdown, BorderLayout.CENTER);
@@ -82,130 +101,158 @@ public class ClickUpRepositoryEditor extends BaseRepositoryEditor<ClickUpReposit
         myAssigneePanel.add(myAssigneeDropdown, BorderLayout.CENTER);
 
         myUseCustomTaskIdsCheckBox = new JCheckBox(ClickUpBundle.message("label.use.custom.task.ids"));
+        myUseCustomTaskIdsCheckBox.setSelected(myRepository.isUseCustomTaskIds());
         myAssigneePanel.add(myUseCustomTaskIdsCheckBox, BorderLayout.EAST);
 
-        if (myRepository.isConfigured() && canConnectToClickUp()) {
-            loadWorkspaces();
-            loadAssignees();
-            loadUseCustomTaskIds();
-        }
+        showWorkspaces(List.of());
+        loadWorkspaces();
 
         myApiTokenField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                // update password in repository with new myApiTokenField value
-                char[] apiToken = myApiTokenField.getPassword();
-                myRepository.setPassword(apiToken != null && apiToken.length > 0 ? String.valueOf(apiToken) : null);
-                myRepository.setTaskService(null);
-                if (myRepository.isConfigured() && canConnectToClickUp()) {
-                    myWorkspaceDropdown.setEnabled(true);
-                    myAssigneeDropdown.setEnabled(true);
-                    loadWorkspaces();
-                    loadAssignees();
-                    loadUseCustomTaskIds();
-                } else {
-                    myWorkspaceDropdown.setEnabled(false);
-                    myAssigneeDropdown.setEnabled(false);
+                String token = currentToken();
+                myTestButton.setEnabled(StringUtil.isNotEmpty(token));
+                // compared with the token of the last load, not the repository's: apply() runs on every keystroke
+                // and has stored the new token already
+                if (Objects.equals(token, myLoadedToken)) {
+                    return;
                 }
-                if (StringUtil.isNotEmpty(myRepository.getPassword())) {
-                    myTestButton.setEnabled(true);
-                }
+                // a new token: the repository builds a new ClickUp client for it
+                myRepository.setPassword(token);
+                loadWorkspaces();
             }
         });
-        myWorkspaceDropdown.addActionListener(e -> loadAssignees());
+        myWorkspaceDropdown.addActionListener(e -> showAssignees());
 
         installListener(myApiTokenField);
         installListener(myWorkspaceDropdown);
         installListener(myAssigneeDropdown);
         installListener(myUseCustomTaskIdsCheckBox);
 
-        // Use FormBuilder to create the panel
         return FormBuilder.createFormBuilder()
                 .setAlignLabelOnRight(true)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.api.token"), SwingConstants.RIGHT), myApiTokenPanel)
+                .addComponentToRightColumn(myErrorLabel)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.workspace"), SwingConstants.RIGHT), myWorkspacePanel)
                 .addLabeledComponent(new JBLabel(ClickUpBundle.message("label.clickup.assignedTo"), SwingConstants.RIGHT), myAssigneePanel)
                 .getPanel();
     }
 
-    private boolean canConnectToClickUp() {
-        boolean canConnect;
-        try {
-            myRepository.getTaskService().testConnection();
-            canConnect = true;
-        } catch (IOException e) {
-            canConnect = false;
-            LOG.warn("Connection test failed", e);
-        }
-        return canConnect;
-    }
-
     @Override
     public void apply() {
         super.apply();
-        // Save selected workspace, space, and list
-        if (myRepository != null) {
-            char[] apiToken = myApiTokenField.getPassword();
-            myRepository.setPassword(apiToken != null && apiToken.length > 0 ? String.valueOf(apiToken) : null);
+        if (myRepository == null) {
+            return;
+        }
+        myRepository.setPassword(currentToken());
 
-            ClickUpWorkspace clickUpWorkspace = (ClickUpWorkspace) myWorkspaceDropdown.getSelectedItem();
-            if (clickUpWorkspace != null) {
-                LOG.info("Selected workspace: " + clickUpWorkspace.getId());
-                myRepository.setSelectedWorkspaceId(clickUpWorkspace.getId());
-            }
+        // Until the dropdowns hold what ClickUp sent (still loading, or the load failed), keep the saved selection.
+        // Once loaded, the <Workspace> and <Assignee> placeholders clear it.
+        if (myWorkspacesLoaded) {
+            myRepository.setSelectedWorkspaceId(selectedId((ClickUpWorkspace) myWorkspaceDropdown.getSelectedItem()));
             ClickUpUser user = (ClickUpUser) myAssigneeDropdown.getSelectedItem();
-            if (user != null) {
-                LOG.info("Selected assignee: " + user.getId());
-                myRepository.setSelectedAssigneeId(user.getId());
-            }
-            myRepository.setUseCustomTaskIds(myUseCustomTaskIdsCheckBox.isSelected());
+            myRepository.setSelectedAssigneeId(user == null || NO_SELECTION_ID.equals(user.getId()) ? null : user.getId());
         }
+        myRepository.setUseCustomTaskIds(myUseCustomTaskIdsCheckBox.isSelected());
     }
 
+    private static String selectedId(ClickUpWorkspace workspace) {
+        return workspace == null || NO_SELECTION_ID.equals(workspace.getId()) ? null : workspace.getId();
+    }
+
+    private String currentToken() {
+        char[] apiToken = myApiTokenField.getPassword();
+        return apiToken != null && apiToken.length > 0 ? String.valueOf(apiToken) : null;
+    }
+
+    /**
+     * Fetches the workspaces for the current token in the background (never on the UI thread: the settings dialog
+     * would freeze while ClickUp answers), then fills the dropdowns, or shows why it couldn't.
+     */
     private void loadWorkspaces() {
-        try {
-            myWorkspaceDropdown.removeAllItems();
-            myWorkspaceDropdown.addItem(new ClickUpWorkspace("-1", "<Workspace>"));
-            if (StringUtil.isEmpty(myRepository.getPassword())) return;
-            for (ClickUpWorkspace workspace : myRepository.fetchWorkspaces()) {
-                myWorkspaceDropdown.addItem(workspace);
-                if (workspace.getId().equals(myRepository.getSelectedWorkspaceId()))
-                    myWorkspaceDropdown.setSelectedItem(workspace);
-            }
-        } catch (IOException e) {
-            LOG.error("Failed to fetch ClickUp data", e);
-            //create an error label and add below myPasswordTest
-            myApiTokenField.add(new JLabel("Failed to fetch ClickUp data"));
-            // remove automatically after 5 seconds
-            new java.util.Timer().schedule(
-                    new java.util.TimerTask() {
-                        @Override
-                        public void run() {
-                            myApiTokenField.remove(0);
-                        }
-                    },
-                    5000
-            );
+        int generation = ++myLoadGeneration;
+        myLoadedToken = myRepository.getPassword();
+        myWorkspacesLoaded = false;
+        hideError();
+        if (StringUtil.isEmpty(myLoadedToken)) {
+            showWorkspaces(List.of());
+            return;
         }
+        myWorkspaceDropdown.setEnabled(false);
+        myAssigneeDropdown.setEnabled(false);
+        ApplicationManager.getApplication().executeOnPooledThread(() -> {
+            List<ClickUpWorkspace> workspaces;
+            Exception failure = null;
+            try {
+                workspaces = myRepository.fetchWorkspaces();
+            } catch (Exception e) {
+                workspaces = List.of();
+                failure = e;
+                LOG.warn("Failed to fetch ClickUp workspaces", e);
+            }
+            List<ClickUpWorkspace> result = workspaces;
+            Exception error = failure;
+            // ModalityState.any(): the settings dialog is modal. A result that arrives after the dialog was closed
+            // (disposed: no longer displayable), or after a newer load started, is dropped, so it never changes a
+            // repository the user is done with. A hidden card of the dialog is still displayable and gets its result.
+            ApplicationManager.getApplication().invokeLater(() -> {
+                if (generation != myLoadGeneration || !myApiTokenField.isDisplayable()) {
+                    return;
+                }
+                myWorkspacesLoaded = error == null;
+                showWorkspaces(result);
+                if (error != null) {
+                    showError(error);
+                }
+            }, ModalityState.any());
+        });
     }
 
-    private void loadAssignees() {
+    private void showWorkspaces(@NotNull List<ClickUpWorkspace> workspaces) {
+        myWorkspaceDropdown.removeAllItems();
+        myWorkspaceDropdown.addItem(new ClickUpWorkspace(NO_SELECTION_ID, ClickUpBundle.message("label.clickup.workspace.none")));
+        for (ClickUpWorkspace workspace : workspaces) {
+            myWorkspaceDropdown.addItem(workspace);
+            if (Objects.equals(workspace.getId(), myRepository.getSelectedWorkspaceId())) {
+                myWorkspaceDropdown.setSelectedItem(workspace);
+            }
+        }
+        myWorkspaceDropdown.setEnabled(!workspaces.isEmpty());
+        showAssignees();
+    }
+
+    private void showAssignees() {
         ClickUpWorkspace selectedClickUpWorkspace = (ClickUpWorkspace) myWorkspaceDropdown.getSelectedItem();
         myAssigneeDropdown.removeAllItems();
-        myAssigneeDropdown.addItem(new ClickUpUser("-1", "<Assignee>", "-"));
-        if (selectedClickUpWorkspace == null || selectedClickUpWorkspace.getId().equals("-1")) {
+        myAssigneeDropdown.addItem(new ClickUpUser(NO_SELECTION_ID, ClickUpBundle.message("label.clickup.assignee.none"), "-"));
+        if (selectedClickUpWorkspace == null || NO_SELECTION_ID.equals(selectedClickUpWorkspace.getId())
+                || selectedClickUpWorkspace.getMembers() == null) {
             myAssigneeDropdown.setEnabled(false);
             return;
         }
         myAssigneeDropdown.setEnabled(true);
         for (ClickUpTeamMember member : selectedClickUpWorkspace.getMembers()) {
-            myAssigneeDropdown.addItem(member.getUser());
-            if (member.getUser().getId().equals(myRepository.getSelectedAssigneeId()))
-                myAssigneeDropdown.setSelectedItem(member.getUser());
+            ClickUpUser user = member.getUser();
+            if (user == null) {
+                continue;
+            }
+            myAssigneeDropdown.addItem(user);
+            if (Objects.equals(user.getId(), myRepository.getSelectedAssigneeId())) {
+                myAssigneeDropdown.setSelectedItem(user);
+            }
         }
     }
 
-    private void loadUseCustomTaskIds() {
-        myUseCustomTaskIdsCheckBox.setSelected(myRepository.isUseCustomTaskIds());
+    private void showError(@NotNull Exception error) {
+        boolean tokenRejected = error instanceof ClickUpApiException apiError && apiError.isAuthenticationError();
+        myErrorLabel.setText(tokenRejected
+                ? ClickUpBundle.message("error.clickup.token.rejected")
+                : ClickUpBundle.message("error.clickup.workspaces.failed", StringUtil.notNullize(error.getMessage())));
+        myErrorLabel.setVisible(true);
+    }
+
+    private void hideError() {
+        myErrorLabel.setText("");
+        myErrorLabel.setVisible(false);
     }
 }

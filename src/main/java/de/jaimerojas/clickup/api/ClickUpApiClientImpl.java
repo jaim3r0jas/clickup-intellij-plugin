@@ -17,22 +17,27 @@ package de.jaimerojas.clickup.api;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
+import com.google.gson.JsonParseException;
 import de.jaimerojas.clickup.model.*;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.ContentType;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.util.EntityUtils;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
 import java.util.List;
 
 /**
  * Default implementation of ClickUpApiClient using Apache HttpClient.
+ * <p>
+ * Every call checks the HTTP status: anything but 2xx throws a {@link ClickUpApiException} with ClickUp's error
+ * message, instead of parsing an error body into an empty object.
  */
 public class ClickUpApiClientImpl implements ClickUpApiClient {
     private static final String BASE_URL = "https://api.clickup.com/api/v2";
@@ -57,14 +62,11 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
         if (useCustomTaskIds && workspaceId != null) {
             uri.append("?custom_task_ids=true&team_id=").append(workspaceId);
         }
-
-        HttpGet httpGet = new HttpGet(uri.toString());
-        httpGet.addHeader("Authorization", apiToken);
-
-        return httpClient.execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            return gson.fromJson(responseBody, ClickUpTask.class);
-        });
+        ClickUpTask task = execute(new HttpGet(uri.toString()), ClickUpTask.class);
+        if (task == null) {
+            throw new IOException("ClickUp returned no task for ID: " + taskId);
+        }
+        return task;
     }
 
     @Override
@@ -86,54 +88,32 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
             url.append("&custom_task_ids=true");
         }
 
-        HttpGet httpGet = new HttpGet(url.toString());
-        httpGet.addHeader("Authorization", apiToken);
-
-        return httpClient.execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetTasks>() {}.getType();
-            GetTasks getTasks = gson.fromJson(responseBody, listType);
-            return getTasks.getTasks();
-        });
+        GetTasks getTasks = execute(new HttpGet(url.toString()), GetTasks.class);
+        return getTasks == null || getTasks.getTasks() == null ? List.of() : getTasks.getTasks();
     }
 
     @Override
     public @NotNull List<ClickUpWorkspace> fetchWorkspaces() throws IOException {
-        HttpGet httpGet = new HttpGet(BASE_URL + "/team");
-        httpGet.addHeader("Authorization", apiToken);
-
-        return httpClient.execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetAuthorizedWorkspaces>() {}.getType();
-            GetAuthorizedWorkspaces workspaces = gson.fromJson(responseBody, listType);
-            return workspaces.getTeams();
-        });
+        GetAuthorizedWorkspaces workspaces = execute(new HttpGet(BASE_URL + "/team"), GetAuthorizedWorkspaces.class);
+        return workspaces == null || workspaces.getTeams() == null ? List.of() : workspaces.getTeams();
     }
 
     @Override
     public @NotNull ClickUpSpace fetchSpace(@NotNull String spaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(BASE_URL + "/space/" + spaceId);
-        httpGet.addHeader("Authorization", apiToken);
-
-        return httpClient.execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<ClickUpSpace>() {}.getType();
-            return gson.fromJson(responseBody, listType);
-        });
+        ClickUpSpace space = execute(new HttpGet(BASE_URL + "/space/" + spaceId), ClickUpSpace.class);
+        if (space == null) {
+            throw new IOException("ClickUp returned no space for ID: " + spaceId);
+        }
+        return space;
     }
 
     @Override
     public @NotNull List<ClickUpCustomItem> fetchCustomItems(@NotNull String workspaceId) throws IOException {
-        HttpGet httpGet = new HttpGet(BASE_URL + "/team/" + workspaceId + "/custom_item");
-        httpGet.addHeader("Authorization", apiToken);
-
-        return httpClient.execute(httpGet, response -> {
-            String responseBody = EntityUtils.toString(response.getEntity());
-            Type listType = new TypeToken<GetCustomItems>() {
-            }.getType();
-            GetCustomItems getCustomItems = gson.fromJson(responseBody, listType);
-            return getCustomItems.getCustom_items();
-        });
+        GetCustomItems getCustomItems = execute(
+                new HttpGet(BASE_URL + "/team/" + workspaceId + "/custom_item"), GetCustomItems.class);
+        return getCustomItems == null || getCustomItems.getCustom_items() == null
+                ? List.of()
+                : getCustomItems.getCustom_items();
     }
 
     @Override
@@ -143,7 +123,7 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
         }
 
         return fetchCustomItems(workspaceId).stream()
-                .filter(item -> item.getId().equals(customItemId))
+                .filter(item -> customItemId.equals(item.getId()))
                 .findFirst()
                 .orElseThrow(() -> new IOException("Custom item not found: " + customItemId));
     }
@@ -160,20 +140,12 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
             url += "?custom_task_ids=true&team_id=" + workspaceId;
         }
 
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.addHeader("Authorization", apiToken);
-        httpPost.addHeader("Content-Type", "application/json");
-
         JsonObject requestBody = new JsonObject();
         requestBody.addProperty("time", String.valueOf(timeSpentMillis));
 
-        httpPost.setEntity(new StringEntity(requestBody.toString()));
-
-        httpClient.execute(httpPost, response -> {
-            // Just consume the response
-            EntityUtils.consume(response.getEntity());
-            return null;
-        });
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.setEntity(new StringEntity(requestBody.toString(), ContentType.APPLICATION_JSON));
+        execute(httpPost, null);
     }
 
     @Override
@@ -191,32 +163,57 @@ public class ClickUpApiClientImpl implements ClickUpApiClient {
             urlBuilder.append("&custom_task_ids=true");
         }
 
-        HttpPut httpPut = new HttpPut(urlBuilder.toString());
-        httpPut.addHeader("Authorization", apiToken);
-        httpPut.addHeader("Content-Type", "application/json");
-
         JsonObject requestBody = new JsonObject();
         requestBody.addProperty("status", statusName);
 
-        httpPut.setEntity(new StringEntity(requestBody.toString()));
-
-        httpClient.execute(httpPut, response -> {
-            EntityUtils.consume(response.getEntity());
-            return null;
-        });
+        HttpPut httpPut = new HttpPut(urlBuilder.toString());
+        httpPut.setEntity(new StringEntity(requestBody.toString(), ContentType.APPLICATION_JSON));
+        execute(httpPut, null);
     }
 
     @Override
     public void testConnection() throws IOException {
-        HttpGet httpGet = new HttpGet(BASE_URL + "/team");
-        httpGet.addHeader("Authorization", apiToken);
-        httpClient.execute(httpGet, response -> {
+        execute(new HttpGet(BASE_URL + "/team"), null);
+    }
+
+    /**
+     * Sends the request with the API token and returns the body parsed as {@code type}, or null when {@code type} is
+     * null or the body is empty.
+     *
+     * @throws ClickUpApiException when ClickUp answers with a status other than 2xx
+     * @throws IOException         when the request fails or the body is not valid JSON
+     */
+    private <T> @Nullable T execute(@NotNull HttpRequestBase request, @Nullable Class<T> type) throws IOException {
+        request.addHeader("Authorization", apiToken);
+        return httpClient.execute(request, response -> {
+            String body = response.getEntity() == null ? "" : EntityUtils.toString(response.getEntity());
             int statusCode = response.getStatusLine().getStatusCode();
             if (statusCode < 200 || statusCode >= 300) {
-                throw new IOException("Cannot connect to ClickUp API.\nStatus code: " + statusCode);
+                throw toApiException(statusCode, body);
             }
-            return null;
+            if (type == null || body.isBlank()) {
+                return null;
+            }
+            try {
+                return gson.fromJson(body, type);
+            } catch (JsonParseException e) {
+                throw new IOException("Unexpected response from ClickUp for " + request.getURI().getPath(), e);
+            }
         });
     }
-}
 
+    private @NotNull ClickUpApiException toApiException(int statusCode, @NotNull String body) {
+        String error = null;
+        String errorCode = null;
+        try {
+            JsonObject json = gson.fromJson(body, JsonObject.class);
+            if (json != null) {
+                error = json.has("err") && !json.get("err").isJsonNull() ? json.get("err").getAsString() : null;
+                errorCode = json.has("ECODE") && !json.get("ECODE").isJsonNull() ? json.get("ECODE").getAsString() : null;
+            }
+        } catch (RuntimeException e) {
+            // not ClickUp's JSON error body (a proxy's HTML page, for one): the status alone has to do
+        }
+        return new ClickUpApiException(statusCode, errorCode, error);
+    }
+}

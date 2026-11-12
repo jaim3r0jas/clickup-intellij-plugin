@@ -121,6 +121,15 @@ class ClickUpRepositoryTest {
         }
 
         @Test
+        @DisplayName("Should return null, not an empty task, when ClickUp answers 404")
+        void findTask_shouldReturnNullWhenClickUpAnswersNotFound() throws IOException {
+            when(taskService.getTask(anyString(), anyBoolean(), anyString()))
+                    .thenThrow(new de.jaimerojas.clickup.api.ClickUpApiException(404, "ITEM_013", "Task not found, deleted"));
+
+            assertNull(repository.findTask("PROJ-42"));
+        }
+
+        @Test
         @DisplayName("Should not fetch custom item when task has no custom item ID")
         void findTask_shouldSkipCustomItemWhenIdMissing() throws IOException {
             // Arrange
@@ -279,6 +288,30 @@ class ClickUpRepositoryTest {
             assertTrue(result.isEmpty(), "Should return empty set when space has no statuses");
         }
 
+        @Test
+        @DisplayName("Should return empty set when the task has no space instead of failing")
+        void getAvailableTaskStates_shouldReturnEmptySetWhenTaskHasNoSpace() throws Exception {
+            ClickUpTask task = new ClickUpTask();
+            task.setId(TEST_TASK_ID);
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID)).thenReturn(task);
+
+            Set<CustomTaskState> result = repository.getAvailableTaskStates(task);
+
+            assertTrue(result.isEmpty());
+            verify(taskService, never()).getSpace(anyString());
+        }
+
+        @Test
+        @DisplayName("Should return empty set when ClickUp has no such task instead of failing")
+        void getAvailableTaskStates_shouldReturnEmptySetWhenTaskNotFound() throws Exception {
+            ClickUpTask task = createTaskWithSpace();
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID)).thenReturn(null);
+
+            Set<CustomTaskState> result = repository.getAvailableTaskStates(task);
+
+            assertTrue(result.isEmpty());
+        }
+
         private ClickUpTask createTaskWithSpace() {
             ClickUpTask task = new ClickUpTask();
             task.setId(TEST_TASK_ID);
@@ -300,6 +333,64 @@ class ClickUpRepositoryTest {
 
             space.setStatuses(Arrays.asList(state1, state2));
             return space;
+        }
+    }
+
+    @Nested
+    @DisplayName("API token (#56)")
+    class ApiToken {
+
+        /**
+         * A repository whose service is built from the token, as in the IDE, recording each token it was built with.
+         */
+        private ClickUpRepository repositoryBuildingServices(List<String> builtWithTokens) {
+            return new ClickUpRepository(new ClickUpRepositoryType()) {
+                @Override
+                protected ClickUpTaskService createTaskService(String apiToken) {
+                    builtWithTokens.add(apiToken);
+                    return org.mockito.Mockito.mock(ClickUpTaskService.class);
+                }
+            };
+        }
+
+        @Test
+        @DisplayName("A new token gets a new ClickUp client: the old token is never used again")
+        void getTaskService_shouldRebuildWhenTokenChanges() {
+            List<String> tokens = new java.util.ArrayList<>();
+            ClickUpRepository repo = repositoryBuildingServices(tokens);
+            repo.setPassword("old-token");
+            ClickUpTaskService first = repo.getTaskService();
+
+            repo.setPassword("new-token");
+            ClickUpTaskService second = repo.getTaskService();
+
+            assertNotSame(first, second);
+            assertEquals(List.of("old-token", "new-token"), tokens);
+        }
+
+        @Test
+        @DisplayName("The same token keeps the same ClickUp client")
+        void getTaskService_shouldReuseForSameToken() {
+            List<String> tokens = new java.util.ArrayList<>();
+            ClickUpRepository repo = repositoryBuildingServices(tokens);
+            repo.setPassword("token");
+
+            assertSame(repo.getTaskService(), repo.getTaskService());
+            assertEquals(List.of("token"), tokens);
+        }
+
+        @Test
+        @DisplayName("The connection test fails when ClickUp rejects the token")
+        void connectionTest_shouldFailOnRejectedToken() throws Exception {
+            org.mockito.Mockito.doThrow(new de.jaimerojas.clickup.api.ClickUpApiException(401, "OAUTH_025", "Token invalid"))
+                    .when(taskService).testConnection();
+
+            com.intellij.tasks.TaskRepository.CancellableConnection connection = repository.createCancellableConnection();
+
+            assertNotNull(connection);
+            Exception error = connection.call();
+            assertNotNull(error, "The test must report the rejected token");
+            assertTrue(error.getMessage().contains("Token invalid"), error.getMessage());
         }
     }
 
