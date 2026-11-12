@@ -29,6 +29,11 @@ public class ClickUpCustomItem {
             String description,
             ClickUpAvatar avatar
     ) {
+        this.id = id;
+        this.name = name;
+        this.name_plural = name_plural;
+        this.description = description;
+        this.avatar = avatar;
     }
 
     public String getId() {

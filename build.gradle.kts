@@ -41,6 +41,8 @@ dependencies {
         bundledPlugin("com.intellij.tasks")
     }
     testImplementation(libs.junit5)
+    // The IntelliJ test environment loads JUnit 4 classes even for JUnit 5 tests
+    testRuntimeOnly(libs.junit4)
     testImplementation("org.mockito:mockito-core:5.7.0")
     testImplementation("org.mockito:mockito-junit-jupiter:5.7.0")
 }

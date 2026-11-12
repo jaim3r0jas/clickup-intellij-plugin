@@ -26,7 +26,6 @@ import com.intellij.util.xmlb.annotations.Attribute;
 import com.intellij.util.xmlb.annotations.Tag;
 import de.jaimerojas.clickup.api.ClickUpApiClient;
 import de.jaimerojas.clickup.api.ClickUpApiClientImpl;
-import de.jaimerojas.clickup.model.ClickUpCustomItem;
 import de.jaimerojas.clickup.model.ClickUpSpace;
 import de.jaimerojas.clickup.model.ClickUpTask;
 import de.jaimerojas.clickup.model.ClickUpWorkspace;
@@ -134,12 +133,12 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
     public Task findTask(@NotNull String taskId) {
         try {
             ClickUpTask task = getTaskService().getTask(taskId, useCustomTaskIds, selectedWorkspaceId);
-            ClickUpCustomItem customItem = getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id());
-            task.setCustomItem(customItem);
-
-            if (task != null) {
-                task.setRepository(this);
+            if (task == null) {
+                return null;
             }
+
+            task.setRepository(this);
+            attachCustomItem(task);
             return task;
         } catch (IOException e) {
             LOG.error("Error fetching task with ID: " + taskId, e);
@@ -166,19 +165,25 @@ public class ClickUpRepository extends NewBaseRepositoryImpl {
             // set repo to each task - necessary to enable status update on open task dialog
             tasks.forEach(task -> {
                 task.setRepository(this);
-                ClickUpCustomItem customItem = null;
-                try {
-                    customItem = getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id());
-                } catch (IOException e) {
-                    LOG.error("Error fetching custom item for task ID: " + task.getId(), e);
-                }
-                task.setCustomItem(customItem);
+                attachCustomItem(task);
             });
             return tasks.toArray(new ClickUpTask[0]);
         } catch (IOException e) {
             LOG.error("Error fetching tasks with query: " + query, e);
         }
         return new Task[0];
+    }
+
+    // a task without a custom item ID, or whose custom item can't be fetched, keeps the default task type
+    private void attachCustomItem(@NotNull ClickUpTask task) {
+        if (task.getCustom_item_id() == null) {
+            return;
+        }
+        try {
+            task.setCustomItem(getTaskService().getCustomItem(selectedWorkspaceId, task.getCustom_item_id()));
+        } catch (IOException e) {
+            LOG.warn("Error fetching custom item for task ID: " + task.getId(), e);
+        }
     }
 
 

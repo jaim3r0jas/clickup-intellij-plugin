@@ -35,8 +35,10 @@ import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -116,6 +118,68 @@ class ClickUpRepositoryTest {
 
             // Assert
             assertNull(result, "Should return null for non-existent task");
+        }
+
+        @Test
+        @DisplayName("Should not fetch custom item when task has no custom item ID")
+        void findTask_shouldSkipCustomItemWhenIdMissing() throws IOException {
+            // Arrange
+            ClickUpTask expectedTask = new ClickUpTask();
+            expectedTask.setId(TEST_TASK_ID);
+
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
+                    .thenReturn(expectedTask);
+
+            // Act
+            Task result = repository.findTask(TEST_TASK_ID);
+
+            // Assert
+            assertNotNull(result, "Task should not be null");
+            assertNull(((ClickUpTask) result).getCustomItem());
+            verify(taskService, never()).getCustomItem(any(), any());
+        }
+
+        @Test
+        @DisplayName("Should keep the task when its custom item can't be fetched")
+        void findTask_shouldKeepTaskWhenCustomItemFails() throws IOException {
+            // Arrange
+            ClickUpTask expectedTask = new ClickUpTask();
+            expectedTask.setId(TEST_TASK_ID);
+            expectedTask.setCustom_item_id("1001");
+
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
+                    .thenReturn(expectedTask);
+            when(taskService.getCustomItem(TEST_WORKSPACE_ID, "1001"))
+                    .thenThrow(new IOException("Custom item not found: 1001"));
+
+            // Act
+            Task result = repository.findTask(TEST_TASK_ID);
+
+            // Assert
+            assertSame(expectedTask, result, "Task should be returned without its custom item");
+            assertNull(expectedTask.getCustomItem());
+        }
+
+        @Test
+        @DisplayName("Should attach custom item when task has a custom item ID")
+        void findTask_shouldAttachCustomItem() throws IOException {
+            // Arrange
+            ClickUpTask expectedTask = new ClickUpTask();
+            expectedTask.setId(TEST_TASK_ID);
+            expectedTask.setCustom_item_id("1001");
+            ClickUpCustomItem customItem = new ClickUpCustomItem("1001", "Bug", "Bugs", null, null);
+
+            when(taskService.getTask(TEST_TASK_ID, false, TEST_WORKSPACE_ID))
+                    .thenReturn(expectedTask);
+            when(taskService.getCustomItem(TEST_WORKSPACE_ID, "1001"))
+                    .thenReturn(customItem);
+
+            // Act
+            Task result = repository.findTask(TEST_TASK_ID);
+
+            // Assert
+            assertNotNull(result, "Task should not be null");
+            assertSame(customItem, ((ClickUpTask) result).getCustomItem());
         }
     }
 
