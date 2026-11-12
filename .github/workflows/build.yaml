@@ -19,12 +19,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: 'jetbrains'
@@ -42,7 +42,7 @@ jobs:
 
       - name: Upload test results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: build/reports/tests/test/
@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload coverage reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: kover-reports
           path: |
@@ -59,7 +59,7 @@ jobs:
           retention-days: 30
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: plugin-artifact
           path: build/distributions/*.zip
@@ -67,7 +67,7 @@ jobs:
 
       - name: Add coverage report to PR
         if: github.event_name == 'pull_request'
-        uses: mi-kas/kover-report@v1
+        uses: mi-kas/kover-report@v2
         with:
           path: ${{ github.workspace }}/build/reports/kover/report.xml
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -77,7 +77,7 @@ jobs:
           min-coverage-changed-files: 60
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           files: ./build/reports/kover/report.xml
           flags: unittests
@@ -92,13 +92,13 @@ jobs:
     needs: build-and-test
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: ${{ github.event.pull_request.head.sha }}
           fetch-depth: 0
 
       - name: Setup Java
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           java-version: '21'
           distribution: 'jetbrains'
@@ -108,7 +108,7 @@ jobs:
         run: chmod +x gradlew
 
       - name: Qodana Scan
-        uses: JetBrains/qodana-action@v2025.2
+        uses: JetBrains/qodana-action@v2026.2.2
         with:
           pr-mode: false
           upload-result: true
