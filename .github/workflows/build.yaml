@@ -107,15 +107,12 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Generate Kover coverage for Qodana
-        run: ./gradlew koverXmlReport
-
       - name: Qodana Scan
         uses: JetBrains/qodana-action@v2025.2
         with:
           pr-mode: false
-          args: --property=idea.coverage.report.xml.path=${{ github.workspace }}/build/reports/kover/report.xml
+          upload-result: true
         env:
-          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN_576555964 }}
+          QODANA_TOKEN: ${{ secrets.QODANA_TOKEN }}
           QODANA_ENDPOINT: 'https://qodana.cloud'
 

@@ -27,15 +27,14 @@ The CI/CD pipeline has been streamlined into two lean, efficient workflows that 
 
 #### Job 2: Code Quality Analysis (Qodana)
 - ✅ Runs after successful build and test
-- ✅ Generates Kover coverage for Qodana integration
-- ✅ Performs comprehensive code quality analysis
-- ✅ Integrates coverage data with quality metrics
-- ✅ Posts results to Qodana Cloud
+- ✅ Runs the free Qodana Community for JVM linter (`qodana.yaml`)
+- ✅ Posts results to Qodana Cloud (Community license) and keeps the report as the `qodana-report` artifact
 
 **Artifacts Generated:**
 - `test-results` - JUnit test reports (30 days retention)
 - `kover-reports` - Coverage reports in HTML and XML (30 days retention)
 - `plugin-artifact` - Built plugin distribution (7 days retention)
+- `qodana-report` - Qodana results
 
 ---
 
@@ -80,8 +79,10 @@ The publish workflow ensures that only tags based on the `main` branch can trigg
 
 ### Code Quality (Qodana)
 - Runs on every push and PR
-- Integrated with Kover coverage data
-- Results available on Qodana Cloud
+- Community license: code coverage and license audit are not part of it (coverage goes to Codecov)
+- Results available on Qodana Cloud and as the `qodana-report` artifact
+- Without a `QODANA_TOKEN` the scan still runs, without uploading to Qodana Cloud. A token Cloud declines ("License
+  request: token was declined") fails the job: the organisation in Qodana Cloud needs a valid (Community) license
 
 ---
 
@@ -89,7 +90,8 @@ The publish workflow ensures that only tags based on the `main` branch can trigg
 
 ### CI Pipeline
 - `CODECOV_TOKEN` - For uploading coverage to Codecov
-- `QODANA_TOKEN_576555964` - For Qodana Cloud integration
+- `QODANA_TOKEN` - Qodana Cloud project token (organisation on the free Community license); also used by the
+  Publish Pipeline's quality gate
 
 ### Publish Pipeline
 - `CERTIFICATE_CHAIN` - Plugin signing certificate chain

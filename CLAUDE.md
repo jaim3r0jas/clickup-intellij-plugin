@@ -45,9 +45,11 @@ write-ups: [docs/](docs/) (CI in detail: [docs/WORKFLOWS.md](docs/WORKFLOWS.md);
   display (ssh, a Claude session), the IDE loads the plugin and then dies with `HeadlessException`. A Claude session
   checks the log for `Loaded custom plugins: ClickUp Integration` and leaves the UI smoke test to the user.
 - `verifyPlugin` is not configured (no `pluginVerification.ides`): it fails with "No IDE resolved for verification".
-- Qodana runs in CI on Qodana Cloud (`qodana.yaml`: `jetbrains/qodana-jvm-community:2025.2`, profile
-  `qodana.recommended`). A local `./gradlew qodanaScan` (Docker) does not work yet: the container can't resolve the
-  project JDK `graalvm-21` from `.idea/misc.xml`. Read the Qodana result of the PR's CI run instead.
+- Qodana runs in CI on Qodana Cloud (`qodana.yaml`: image `jetbrains/qodana-jvm-community:2025.2`, profile
+  `qodana.recommended`), with the secret `QODANA_TOKEN`. The Cloud organisation has the free Community license: no
+  code coverage or license audit in Qodana, and a paid-only linter or feature fails the license check. A local
+  `./gradlew qodanaScan` (Docker) does not work yet: the container can't resolve the project JDK `graalvm-21` from
+  `.idea/misc.xml`. Read the Qodana result of the PR's CI run instead.
 
 ## IDE targets
 
