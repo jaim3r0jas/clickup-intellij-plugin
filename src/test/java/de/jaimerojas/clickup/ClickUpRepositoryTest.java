@@ -130,6 +130,15 @@ class ClickUpRepositoryTest {
         }
 
         @Test
+        @DisplayName("Should return null for a task without an ID, so the IDE never copies an empty ID (#55)")
+        void findTask_shouldReturnNullForTaskWithoutId() throws IOException {
+            // what Gson makes of {"err":"Task not found, deleted","ECODE":"ITEM_013"}
+            when(taskService.getTask(anyString(), anyBoolean(), anyString())).thenReturn(new ClickUpTask());
+
+            assertNull(repository.findTask("abc123"));
+        }
+
+        @Test
         @DisplayName("Should not fetch custom item when task has no custom item ID")
         void findTask_shouldSkipCustomItemWhenIdMissing() throws IOException {
             // Arrange

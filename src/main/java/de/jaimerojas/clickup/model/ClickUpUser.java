@@ -17,6 +17,8 @@ package de.jaimerojas.clickup.model;
 
 import org.jetbrains.annotations.NotNull;
 
+import java.util.Objects;
+
 public class ClickUpUser {
 
     @NotNull
@@ -24,7 +26,7 @@ public class ClickUpUser {
     private String username;
     private String email;
 
-    public ClickUpUser(String id, String username, String email) {
+    public ClickUpUser(@NotNull String id, String username, String email) {
         this.id = id;
         this.username = username;
         this.email = email;
@@ -63,11 +65,11 @@ public class ClickUpUser {
     public final boolean equals(Object o) {
         if (!(o instanceof ClickUpUser that)) return false;
 
-        return id.equals(that.id);
+        return Objects.equals(id, that.id);
     }
 
     @Override
     public int hashCode() {
-        return id.hashCode();
+        return Objects.hashCode(id);
     }
 }

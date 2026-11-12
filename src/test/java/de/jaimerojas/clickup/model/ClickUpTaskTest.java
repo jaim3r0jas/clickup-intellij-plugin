@@ -15,11 +15,16 @@
  */
 package de.jaimerojas.clickup.model;
 
+import com.google.gson.Gson;
 import com.intellij.tasks.TaskType;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import java.util.Date;
+import java.util.Locale;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for {@link ClickUpTask}.
@@ -47,5 +52,69 @@ class ClickUpTaskTest {
 
         // Act & Assert
         assertEquals(TaskType.BUG, task.getType());
+    }
+
+    @Nested
+    @DisplayName("A task with missing fields (#55)")
+    class MissingFields {
+
+        @Test
+        @DisplayName("An empty task (ClickUp's error body parsed as a task) has an empty ID instead of failing @NotNull")
+        void getId_shouldNeverReturnNull() {
+            // what the plugin built before #56's fix from {"err":"Task not found, deleted","ECODE":"ITEM_013"}
+            ClickUpTask task = new Gson().fromJson("{\"err\":\"Task not found, deleted\",\"ECODE\":\"ITEM_013\"}",
+                    ClickUpTask.class);
+
+            assertFalse(task.hasId());
+            assertEquals("", task.getId());
+            assertEquals("", task.getSummary());
+            assertEquals("", task.getPresentableId());
+        }
+
+        @Test
+        @DisplayName("Missing or malformed dates are no date, not an exception")
+        void dates_shouldBeNullWhenMissingOrMalformed() {
+            ClickUpTask task = new ClickUpTask();
+            assertNull(task.getUpdated());
+            assertNull(task.getCreated());
+
+            task.setDate_updated("not-a-number");
+            task.setDate_created(" ");
+            assertNull(task.getUpdated());
+            assertNull(task.getCreated());
+        }
+
+        @Test
+        @DisplayName("Dates in epoch milliseconds are parsed")
+        void dates_shouldParseEpochMillis() {
+            ClickUpTask task = new ClickUpTask();
+            task.setDate_updated("1700000000000");
+
+            assertEquals(new Date(1700000000000L), task.getUpdated());
+        }
+
+        @Test
+        @DisplayName("Custom item names map to a type whatever the JVM's locale (Turkish dotless i)")
+        void getType_shouldIgnoreDefaultLocale() {
+            Locale previous = Locale.getDefault();
+            try {
+                Locale.setDefault(Locale.forLanguageTag("tr-TR"));
+                ClickUpTask task = new ClickUpTask();
+                task.setCustomItem(new ClickUpCustomItem("1002", "ISSUE", "ISSUES", null, null));
+
+                assertEquals(TaskType.BUG, task.getType());
+            } finally {
+                Locale.setDefault(previous);
+            }
+        }
+
+        @Test
+        @DisplayName("A custom item without a name gives the default type instead of an NPE")
+        void getType_shouldHandleCustomItemWithoutName() {
+            ClickUpTask task = new ClickUpTask();
+            task.setCustomItem(new ClickUpCustomItem("1001", null, null, null, null));
+
+            assertEquals(TaskType.FEATURE, task.getType());
+        }
     }
 }
